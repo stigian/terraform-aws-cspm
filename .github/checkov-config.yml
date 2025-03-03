@@ -1,0 +1,11 @@
+# Full sample config at https://github.com/bridgecrewio/checkov
+download-external-modules: false
+framework:
+  - terraform
+output: cli,sarif
+quiet: true # Display only failed checks
+skip-check:
+  - CKV_TF_1 # Ensure Terraform module sources use a commit hash
+  - CKV_TF_2 # Ensure Terraform module sources use a tag with a version number
+skip-path:
+soft-fail: true # Do not return an error code if there are failed checks
