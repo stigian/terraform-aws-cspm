@@ -353,7 +353,7 @@ data "aws_iam_policy_document" "s3_assume_role" {
 
 resource "aws_iam_role" "replication" {
   provider           = aws.log
-  name               = "replication-to-central-log-bucket"
+  name               = "ct-central-logs-replication"
   assume_role_policy = data.aws_iam_policy_document.s3_assume_role.json
 }
 
@@ -425,7 +425,7 @@ data "aws_iam_policy_document" "replication" {
 
 resource "aws_iam_policy" "replication" {
   provider = aws.log
-  name     = "replication-to-central-log-bucket"
+  name     = "ct-central-logs-replication"
   policy   = data.aws_iam_policy_document.replication.json
 }
 
