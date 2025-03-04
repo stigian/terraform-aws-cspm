@@ -98,21 +98,6 @@ resource "aws_guardduty_detector" "hubandspoke" {
   enable   = true
 }
 
-# TODO: configure destination publishing after setting up the destination bucket
-# resource "aws_guardduty_publishing_destination" "test" {
-#   detector_id     = aws_guardduty_detector.this["audit"].id
-#   destination_arn = aws_s3_bucket.gd_bucket.arn
-#   kms_key_arn     = aws_kms_key.gd_key.arn
-
-#   depends_on = [
-#     aws_s3_bucket_policy.gd_bucket_policy,
-#   ]
-# }
-
-# TODO: consider a condition to enable EKS_RUNTIME_MONITORING and RUNTIME_MONITORING
-# features for customers with EKS/EC2 clusters.
-# https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/guardduty_member_detector_feature
-
 
 ###############################################################################
 # Amazon Detective
@@ -357,7 +342,7 @@ resource "aws_securityhub_configuration_policy" "this" {
       "arn:${data.aws_partition.audit.partition}:securityhub:${data.aws_region.audit.name}::standards/nist-800-53/v/5.0.0",
     ]
     security_controls_configuration {
-      disabled_control_identifiers = [] # TODO: add suppression filters here
+      disabled_control_identifiers = []
     }
   }
 
@@ -478,7 +463,7 @@ module "central_bucket" {
   # TODO: add new bucket in log account as target for access logging recofds
   # logging = {
   #   target_bucket = module.s3_server_access_logs.s3_bucket_id
-  #   target_prefix = "access/central-logs/"
+  #   target_prefix = "s3-access/"
   #   target_object_key_format = {
   #     partitioned_prefix = {
   #       partition_date_source = "DeliveryTime" # "EventTime"

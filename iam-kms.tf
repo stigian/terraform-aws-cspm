@@ -12,13 +12,6 @@
 #       - https://repost.aws/questions/QUF9Umvk9aTkyL78HJJ-vYRg/enabling-aws-configuration-on-control-tower-main-account
 ###############################################################################
 
-# If you need to create a service-linked role for GuardDuty, uncomment the following block
-# resource "aws_iam_service_linked_role" "guardduty" {
-#   for_each         = var.account_id_map
-#   provider         = aws[each.key]
-#   aws_service_name = "guardduty.amazonaws.com"
-# }
-
 resource "aws_iam_service_linked_role" "log_detective" {
   provider         = aws.log
   aws_service_name = "detective.amazonaws.com"
@@ -59,45 +52,25 @@ resource "aws_iam_service_linked_role" "hubandspoke_agentless_inspector2" {
   aws_service_name = "agentless.inspector2.amazonaws.com"
 }
 
-# resource "aws_kms_alias" "control_tower" {
-#   name          = "alias/control-tower-encryption"
-#   target_key_id = aws_kms_key.control_tower.key_id
-# }
-
-# resource "aws_kms_key" "control_tower" {
-#   description             = "KMS encryption key for Control Tower resources"
-#   deletion_window_in_days = 7
-#   enable_key_rotation     = true
-
-#   tags = {
-#     Name = ""
-#   }
-# }
-
 # resource "aws_iam_service_linked_role" "ct_admin" {
 #   provider         = aws.management
-#   for_each         = var.account_id_map["management"]
 #   aws_service_name = "controltower.amazonaws.com"
 # }
 
 # resource "aws_iam_service_linked_role" "ct_cloudtrail" {
 #   provider         = aws.management
-#   for_each         = var.account_id_map["management"]
 #   aws_service_name = "agentless.inspector2.amazonaws.com"
 # }
 
 # resource "aws_iam_service_linked_role" "ct_stackset" {
 #   provider         = aws.management
-#   for_each         = var.account_id_map["management"]
 #   aws_service_name = "agentless.inspector2.amazonaws.com"
 # }
 
 # resource "aws_iam_service_linked_role" "ct_config" {
 #   provider         = aws.management
-#   for_each         = var.account_id_map["management"]
 #   aws_service_name = "agentless.inspector2.amazonaws.com"
 # }
-
 
 
 ###############################################################################
@@ -134,7 +107,7 @@ resource "aws_kms_key_policy" "control_tower" {
       {
         Sid    = "Enable IAM User Permissions"
         Effect = "Allow"
-        Principal = { # TODO: replace :root with more specific principals
+        Principal = {
           AWS = [
             data.aws_caller_identity.management.arn,
             "arn:${data.aws_partition.management.partition}:iam::${data.aws_caller_identity.management.account_id}:root"
@@ -214,6 +187,15 @@ resource "aws_kms_key_policy" "control_tower" {
 
 # -- Central logs bucket and key ---
 
+# Find the AWSAdministratorAccess role provisioned by Control Tower
+# https://docs.aws.amazon.com/controltower/latest/userguide/sso-groups.html
+data "aws_iam_roles" "log_sso_admin" {
+  provider    = aws.log
+  name_regex  = "AWSReservedSSO_AWSAdministratorAccess_.*"
+  path_prefix = "/aws-reserved/sso.amazonaws.com/"
+  depends_on  = [aws_controltower_landing_zone.this]
+}
+
 resource "aws_kms_alias" "central_log_bucket" {
   provider      = aws.log
   name          = "alias/central-log-objects"
@@ -229,15 +211,6 @@ resource "aws_kms_key" "central_log_bucket" {
   tags = {
     Name = "central-log-bucket-key"
   }
-}
-
-# Find the AWSAdministratorAccess role provisioned by Control Tower
-# https://docs.aws.amazon.com/controltower/latest/userguide/sso-groups.html
-data "aws_iam_roles" "log_sso_admin" {
-  provider    = aws.log
-  name_regex  = "AWSReservedSSO_AWSAdministratorAccess_.*"
-  path_prefix = "/aws-reserved/sso.amazonaws.com/"
-  depends_on  = [aws_controltower_landing_zone.this]
 }
 
 resource "aws_kms_key_policy" "central_log_bucket" {
@@ -269,7 +242,7 @@ resource "aws_kms_key_policy" "central_log_bucket" {
       {
         Sid    = "Enable IAM User Permissions"
         Effect = "Allow"
-        Principal = { # TODO: replace :root with specific IAM roles or groups
+        Principal = {
           AWS = concat(
             [data.aws_caller_identity.log.arn],            # OrganizationAccountAccessRole
             tolist(data.aws_iam_roles.log_sso_admin.arns), # AWSReservedSSO_AWSAdministratorAccess_*
@@ -479,7 +452,3 @@ data "aws_iam_policy_document" "central_logs_bucket" {
     resources = [module.central_bucket.s3_bucket_arn]
   }
 }
-
-
-# TODO:
-#   - setup guardduty logging to central logs bucket
