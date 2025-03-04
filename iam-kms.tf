@@ -6,7 +6,7 @@
 # Service-Linked Roles
 #
 # Provision remaining service-linked roles where main.tf does not create them.
-# Note: Control Tower does not provisiong AWSServiceRoleForconfig in the management
+# Note: Control Tower does not provision AWSServiceRoleForconfig in the management
 #       account. As a result, Security Hub will show a critical finding for this.
 #       This is apparntly the expected behavior. See the following for more info:
 #       - https://repost.aws/questions/QUF9Umvk9aTkyL78HJJ-vYRg/enabling-aws-configuration-on-control-tower-main-account
@@ -248,11 +248,12 @@ resource "aws_kms_key_policy" "central_log_bucket" {
     Id      = "kms-key-policy-central-logs"
     Statement = [
       {
-        Sid    = "Allow hubandspoke account to use this key"
+        Sid    = "Allow replication roles to use this key"
         Effect = "Allow"
         Principal = {
-          AWS = [ # TODO: replace with output from hubandspoke
-            "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:role/${var.replication_role_name}"
+          AWS = [
+            "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:role/${var.replication_role_name}",
+            resource.aws_iam_role.replication.arn,
             # "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:root"
           ]
         }
@@ -435,12 +436,12 @@ resource "aws_iam_role_policy_attachment" "replication" {
 }
 
 
-# Bucket policy to allow replication of objects from hubandspoke aggregation
-# bucket to central logs bucket.
+# Bucket policy to allow replication of objects from hubandspoke and control tower
+# to central logs bucket in log account.
 #   https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-walkthrough-2.html
 # TODO: review for best practices concerning conditions, see:
 #   https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-config-for-kms-objects.html
-data "aws_iam_policy_document" "logs_from_hubandspoke" {
+data "aws_iam_policy_document" "central_logs_bucket" {
   provider = aws.log
   statement {
     sid    = "Permissions on objects"
@@ -448,7 +449,8 @@ data "aws_iam_policy_document" "logs_from_hubandspoke" {
     principals {
       type = "AWS"
       identifiers = [
-        "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:role/${var.replication_role_name}"
+        "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:role/${var.replication_role_name}",
+        resource.aws_iam_role.replication.arn,
       ]
     }
     actions = [
@@ -465,7 +467,8 @@ data "aws_iam_policy_document" "logs_from_hubandspoke" {
     principals {
       type = "AWS"
       identifiers = [
-        "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:role/${var.replication_role_name}"
+        "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:role/${var.replication_role_name}",
+        resource.aws_iam_role.replication.arn,
       ]
     }
     actions = [
@@ -476,3 +479,7 @@ data "aws_iam_policy_document" "logs_from_hubandspoke" {
     resources = [module.central_bucket.s3_bucket_arn]
   }
 }
+
+
+# TODO:
+#   - setup guardduty logging to central logs bucket
