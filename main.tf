@@ -438,7 +438,7 @@ module "central_bucket" {
   attach_deny_insecure_transport_policy = true
   attach_require_latest_tls_policy      = true
   attach_policy                         = true
-  policy                                = data.aws_iam_policy_document.logs_from_hubandspoke.json
+  policy                                = data.aws_iam_policy_document.central_logs_bucket.json
 
   lifecycle_rule = [
     {
