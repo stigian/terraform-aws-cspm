@@ -6,18 +6,11 @@
 # Service-Linked Roles
 #
 # Provision remaining service-linked roles where main.tf does not create them.
-# Note: Control Tower does not provisiong AWSServiceRoleForconfig in the management
+# Note: Control Tower does not provision AWSServiceRoleForconfig in the management
 #       account. As a result, Security Hub will show a critical finding for this.
 #       This is apparntly the expected behavior. See the following for more info:
 #       - https://repost.aws/questions/QUF9Umvk9aTkyL78HJJ-vYRg/enabling-aws-configuration-on-control-tower-main-account
 ###############################################################################
-
-# If you need to create a service-linked role for GuardDuty, uncomment the following block
-# resource "aws_iam_service_linked_role" "guardduty" {
-#   for_each         = var.account_id_map
-#   provider         = aws[each.key]
-#   aws_service_name = "guardduty.amazonaws.com"
-# }
 
 resource "aws_iam_service_linked_role" "log_detective" {
   provider         = aws.log
@@ -59,45 +52,25 @@ resource "aws_iam_service_linked_role" "hubandspoke_agentless_inspector2" {
   aws_service_name = "agentless.inspector2.amazonaws.com"
 }
 
-# resource "aws_kms_alias" "control_tower" {
-#   name          = "alias/control-tower-encryption"
-#   target_key_id = aws_kms_key.control_tower.key_id
-# }
-
-# resource "aws_kms_key" "control_tower" {
-#   description             = "KMS encryption key for Control Tower resources"
-#   deletion_window_in_days = 7
-#   enable_key_rotation     = true
-
-#   tags = {
-#     Name = ""
-#   }
-# }
-
 # resource "aws_iam_service_linked_role" "ct_admin" {
 #   provider         = aws.management
-#   for_each         = var.account_id_map["management"]
 #   aws_service_name = "controltower.amazonaws.com"
 # }
 
 # resource "aws_iam_service_linked_role" "ct_cloudtrail" {
 #   provider         = aws.management
-#   for_each         = var.account_id_map["management"]
 #   aws_service_name = "agentless.inspector2.amazonaws.com"
 # }
 
 # resource "aws_iam_service_linked_role" "ct_stackset" {
 #   provider         = aws.management
-#   for_each         = var.account_id_map["management"]
 #   aws_service_name = "agentless.inspector2.amazonaws.com"
 # }
 
 # resource "aws_iam_service_linked_role" "ct_config" {
 #   provider         = aws.management
-#   for_each         = var.account_id_map["management"]
 #   aws_service_name = "agentless.inspector2.amazonaws.com"
 # }
-
 
 
 ###############################################################################
@@ -134,7 +107,7 @@ resource "aws_kms_key_policy" "control_tower" {
       {
         Sid    = "Enable IAM User Permissions"
         Effect = "Allow"
-        Principal = { # TODO: replace :root with more specific principals
+        Principal = {
           AWS = [
             data.aws_caller_identity.management.arn,
             "arn:${data.aws_partition.management.partition}:iam::${data.aws_caller_identity.management.account_id}:root"
@@ -214,6 +187,15 @@ resource "aws_kms_key_policy" "control_tower" {
 
 # -- Central logs bucket and key ---
 
+# Find the AWSAdministratorAccess role provisioned by Control Tower
+# https://docs.aws.amazon.com/controltower/latest/userguide/sso-groups.html
+data "aws_iam_roles" "log_sso_admin" {
+  provider    = aws.log
+  name_regex  = "AWSReservedSSO_AWSAdministratorAccess_.*"
+  path_prefix = "/aws-reserved/sso.amazonaws.com/"
+  depends_on  = [aws_controltower_landing_zone.this]
+}
+
 resource "aws_kms_alias" "central_log_bucket" {
   provider      = aws.log
   name          = "alias/central-log-objects"
@@ -231,15 +213,6 @@ resource "aws_kms_key" "central_log_bucket" {
   }
 }
 
-# Find the AWSAdministratorAccess role provisioned by Control Tower
-# https://docs.aws.amazon.com/controltower/latest/userguide/sso-groups.html
-data "aws_iam_roles" "log_sso_admin" {
-  provider    = aws.log
-  name_regex  = "AWSReservedSSO_AWSAdministratorAccess_.*"
-  path_prefix = "/aws-reserved/sso.amazonaws.com/"
-  depends_on  = [aws_controltower_landing_zone.this]
-}
-
 resource "aws_kms_key_policy" "central_log_bucket" {
   provider = aws.log
   key_id   = aws_kms_key.central_log_bucket.key_id
@@ -248,11 +221,12 @@ resource "aws_kms_key_policy" "central_log_bucket" {
     Id      = "kms-key-policy-central-logs"
     Statement = [
       {
-        Sid    = "Allow hubandspoke account to use this key"
+        Sid    = "Allow replication roles to use this key"
         Effect = "Allow"
         Principal = {
-          AWS = [ # TODO: replace with output from hubandspoke
-            "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:role/${var.replication_role_name}"
+          AWS = [
+            "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:role/${var.replication_role_name}",
+            resource.aws_iam_role.replication.arn,
             # "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:root"
           ]
         }
@@ -268,7 +242,7 @@ resource "aws_kms_key_policy" "central_log_bucket" {
       {
         Sid    = "Enable IAM User Permissions"
         Effect = "Allow"
-        Principal = { # TODO: replace :root with specific IAM roles or groups
+        Principal = {
           AWS = concat(
             [data.aws_caller_identity.log.arn],            # OrganizationAccountAccessRole
             tolist(data.aws_iam_roles.log_sso_admin.arns), # AWSReservedSSO_AWSAdministratorAccess_*
@@ -352,7 +326,7 @@ data "aws_iam_policy_document" "s3_assume_role" {
 
 resource "aws_iam_role" "replication" {
   provider           = aws.log
-  name               = "replication-to-central-log-bucket"
+  name               = "ct-central-logs-replication"
   assume_role_policy = data.aws_iam_policy_document.s3_assume_role.json
 }
 
@@ -424,7 +398,7 @@ data "aws_iam_policy_document" "replication" {
 
 resource "aws_iam_policy" "replication" {
   provider = aws.log
-  name     = "replication-to-central-log-bucket"
+  name     = "ct-central-logs-replication"
   policy   = data.aws_iam_policy_document.replication.json
 }
 
@@ -435,12 +409,12 @@ resource "aws_iam_role_policy_attachment" "replication" {
 }
 
 
-# Bucket policy to allow replication of objects from hubandspoke aggregation
-# bucket to central logs bucket.
+# Bucket policy to allow replication of objects from hubandspoke and control tower
+# to central logs bucket in log account.
 #   https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-walkthrough-2.html
 # TODO: review for best practices concerning conditions, see:
 #   https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-config-for-kms-objects.html
-data "aws_iam_policy_document" "logs_from_hubandspoke" {
+data "aws_iam_policy_document" "central_logs_bucket" {
   provider = aws.log
   statement {
     sid    = "Permissions on objects"
@@ -448,7 +422,8 @@ data "aws_iam_policy_document" "logs_from_hubandspoke" {
     principals {
       type = "AWS"
       identifiers = [
-        "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:role/${var.replication_role_name}"
+        "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:role/${var.replication_role_name}",
+        resource.aws_iam_role.replication.arn,
       ]
     }
     actions = [
@@ -465,7 +440,8 @@ data "aws_iam_policy_document" "logs_from_hubandspoke" {
     principals {
       type = "AWS"
       identifiers = [
-        "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:role/${var.replication_role_name}"
+        "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:role/${var.replication_role_name}",
+        resource.aws_iam_role.replication.arn,
       ]
     }
     actions = [

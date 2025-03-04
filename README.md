@@ -67,7 +67,7 @@ In Govcloud, create and add accounts to the AWS Organization. The accounts do no
 1. Login to the audit account
 1. Navigate to _Accounts_ in the left hand pane
 1. Verify every account _Status_ column shows _Enabled_
-1. If not, select the checkbox nex to each account, click _Actions_, click _Add member_
+1. If not, select the checkbox next to each account, click _Actions_, click _Add member_
 
 
 ## Detective
