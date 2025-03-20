@@ -127,7 +127,7 @@ resource "aws_kms_key_policy" "control_tower" {
         Effect = "Allow"
         Principal = {
           AWS = flatten([
-            data.aws_caller_identity.management.arn,
+            [data.aws_caller_identity.management.arn],
             var.key_admin_arns,
           ])
         }
