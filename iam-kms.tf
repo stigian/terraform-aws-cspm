@@ -459,24 +459,4 @@ data "aws_iam_policy_document" "central_logs_bucket" {
     ]
     resources = [module.central_bucket.s3_bucket_arn]
   }
-
-  statement {
-    sid       = "Allow access from docker-splunk in hubandspoke"
-    effect    = "Allow"
-    principal = "*"
-    action = [
-      "s3:GetObject",
-    ]
-    resource = [
-      "${module.central_bucket.s3_bucket_arn}/*"
-    ]
-    condition {
-      test     = "StringEquals"
-      variable = "s3:ResourceAccount"
-      values = [
-        local.hubandspoke_account_id,
-        local.management_account_id
-      ]
-    }
-  }
 }

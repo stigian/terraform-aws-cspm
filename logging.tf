@@ -547,6 +547,7 @@ resource "aws_iam_role" "central_logs" {
   provider = aws.hubandspoke
 
   name               = "hubandspoke-log-replication"
+  description        = "Role for replicating logs from hubandspoke to the log archive account"
   assume_role_policy = data.aws_iam_policy_document.central_logs_assume_role.json
 }
 
@@ -626,7 +627,7 @@ data "aws_iam_policy_document" "central_logs" {
 
     resources = [
       aws_kms_key.hubandspoke_s3.arn,
-      aws_kms_key.central_bucket,
+      aws_kms_key.central_bucket.arn,
     ]
   }
 }
@@ -742,7 +743,7 @@ resource "aws_kms_key_policy" "hubandspoke_s3" {
         Resource = "*"
         Condition = {
           StringEquals = {
-            "aws:PrincipalOrgID" = data.aws_organizations_organization.hubandspoke.id
+            "aws:PrincipalOrgID" = data.aws_organizations_organization.this.id
           }
         }
       }
