@@ -126,7 +126,7 @@ resource "aws_kms_key_policy" "control_tower" {
         Sid    = "Allow access for Key Administrators"
         Effect = "Allow"
         Principal = {
-          AWS = concat([
+          AWS = flatten([
             data.aws_caller_identity.management.arn,
             var.key_admin_arns,
           ])
@@ -150,7 +150,7 @@ resource "aws_kms_key_policy" "control_tower" {
         Resource = aws_kms_key.control_tower.arn
       },
       {
-        Sid    = "Allow Config to use KMS for encryption"
+        Sid    = "Allow Config to use KMS for decryption"
         Effect = "Allow"
         Principal = {
           Service = ["config.amazonaws.com"]
@@ -162,7 +162,7 @@ resource "aws_kms_key_policy" "control_tower" {
         Resource = aws_kms_key.control_tower.arn
       },
       {
-        Sid    = "Allow CloudTrail to use KMS for encryption"
+        Sid    = "Allow CloudTrail to use KMS for decryption"
         Effect = "Allow"
         Principal = {
           Service = ["cloudtrail.amazonaws.com"]
@@ -244,7 +244,7 @@ resource "aws_kms_key_policy" "central_log_bucket" {
         Sid    = "Enable IAM User Permissions"
         Effect = "Allow"
         Principal = {
-          AWS = concat(
+          AWS = flatten(
             [data.aws_caller_identity.log.arn],            # OrganizationAccountAccessRole
             tolist(data.aws_iam_roles.log_sso_admin.arns), # AWSReservedSSO_AWSAdministratorAccess_*
             ["arn:${data.aws_partition.log.partition}:iam::${data.aws_caller_identity.log.account_id}:root"]
@@ -263,7 +263,7 @@ resource "aws_kms_key_policy" "central_log_bucket" {
         Sid    = "Allow access for Key Administrators"
         Effect = "Allow"
         Principal = {
-          AWS = concat(
+          AWS = flatten(
             [data.aws_caller_identity.log.arn],            # OrganizationAccountAccessRole
             tolist(data.aws_iam_roles.log_sso_admin.arns), # AWSReservedSSO_AWSAdministratorAccess_*
             var.key_admin_arns,

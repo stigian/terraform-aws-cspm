@@ -570,7 +570,7 @@ resource "aws_kms_key_policy" "hubandspoke_s3" {
         Sid    = "Allow access for Key Administrators"
         Effect = "Allow"
         Principal = {
-          AWS = concat([
+          AWS = flatten([
             [data.aws_caller_identity.hubandspoke.arn],
             var.key_admin_arns,
           ])
