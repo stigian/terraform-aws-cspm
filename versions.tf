@@ -8,7 +8,7 @@ terraform {
         aws.log,
         aws.audit,
         aws.management,
-        aws.hubandspoke,
+        aws.hubandspoke
       ]
     }
     random = {

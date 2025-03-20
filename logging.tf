@@ -517,9 +517,389 @@ data "aws_iam_policy_document" "anfw_logs" {
 
 
 ###############################################################################
-# Central Logs
+# KMS for hubandspoke log object encryption
+###############################################################################
+
+resource "aws_kms_alias" "hubandspoke_s3" {
+  provider = aws.hubandspoke
+
+  name          = "alias/hubandspoke-log-objects-${var.identifier}"
+  target_key_id = aws_kms_key.hubandspoke_s3.key_id
+}
+
+resource "aws_kms_key" "hubandspoke_s3" {
+  provider = aws.hubandspoke
+
+  description             = "KMS key is used to encrypt hubandspoke log bucket objects"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  tags = {
+    Name = "hubandspoke-log-objects-${var.identifier}"
+  }
+}
+
+resource "aws_kms_key_policy" "hubandspoke_s3" {
+  provider = aws.hubandspoke
+
+  key_id = aws_kms_key.hubandspoke_s3.key_id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Id      = "hubandspoke-log-objects-key-policy"
+    Statement = [
+      {
+        Sid    = "Enable IAM User Permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = [
+            data.aws_caller_identity.hubandspoke.arn,
+            "arn:${data.aws_partition.hubandspoke.partition}:iam::${data.aws_caller_identity.hubandspoke.account_id}:root"
+          ]
+        }
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:CreateGrant",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow access for Key Administrators"
+        Effect = "Allow"
+        Principal = {
+          AWS = concat([
+            [data.aws_caller_identity.hubandspoke.arn],
+            var.key_admin_arns,
+          ])
+        }
+        Action = [
+          "kms:Create*",
+          "kms:Describe*",
+          "kms:Enable*",
+          "kms:List*",
+          "kms:Put*",
+          "kms:Update*",
+          "kms:Revoke*",
+          "kms:Disable*",
+          "kms:Get*",
+          "kms:Delete*",
+          "kms:TagResource",
+          "kms:UntagResource",
+          "kms:ScheduleKeyDeletion",
+          "kms:CancelKeyDeletion"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow services to use the key"
+        Effect = "Allow"
+        Principal = {
+          Service = [
+            "s3.amazonaws.com",
+            "delivery.logs.amazonaws.com"
+          ]
+        }
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
+        # Condition = {
+        #   StringEquals = {
+        #     "aws:PrincipalOrgID" = data.aws_organizations_organization.hubandspoke.id
+        #   }
+        # }
+      }
+    ]
+  })
+}
+
+
+###############################################################################
+# Cloudtrail and Config
 #
-# These resources allows S3 in the hub-and-spoke accounts to replicate logs to
+# These buckets are created in the hubandspoke account to receive replicated
+# logs from the control Tower bucket in the log archive account. This makes it
+# easier to ingest those logs into Splunk, and ensures that any meaningful
+# infrastructure remains within the hubandspoke account where it is monitored.
+###############################################################################
+
+module "s3_org_cloudtrail_logs" {
+  providers = { aws = aws.hubandspoke }
+
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "~> 4.3"
+
+  bucket                                = local.bucket_names["org_cloudtrail"]
+  force_destroy                         = true
+  control_object_ownership              = true
+  attach_deny_insecure_transport_policy = true
+  attach_require_latest_tls_policy      = true
+  attach_policy                         = true
+  policy                                = data.aws_iam_policy_document.ct_log_delivery.json
+
+  lifecycle_rule = local.lifecycle_rule
+
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        kms_master_key_id = aws_kms_key.hubandspoke_s3.arn
+        sse_algorithm     = "aws:kms"
+      }
+    }
+  }
+  logging = {
+    target_bucket = module.s3_server_access_logs.s3_bucket_id
+    target_prefix = "org-cloudtrail/"
+    target_object_key_format = {
+      partitioned_prefix = {
+        partition_date_source = "DeliveryTime" # "EventTime"
+      }
+    }
+  }
+
+  versioning = {
+    enabled    = true
+    mfa_delete = false # must be false for lifecycle rules to work
+  }
+}
+
+data "aws_iam_policy_document" "ct_log_delivery" {
+  provider = aws.hubandspoke
+
+  statement {
+    sid    = "AWSLogDeliveryWrite"
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["delivery.logs.amazonaws.com"]
+    }
+
+    actions = ["s3:PutObject"]
+
+    resources = [
+      "${module.s3_org_cloudtrail_logs.s3_bucket_arn}/*",
+      # "${module.s3_org_config_logs.s3_bucket_arn}/*",
+    ]
+  }
+
+  statement {
+    sid = "AWSLogDeliveryAclCheck"
+
+    principals {
+      type        = "Service"
+      identifiers = ["delivery.logs.amazonaws.com"]
+    }
+
+    actions = ["s3:GetBucketAcl"]
+
+    resources = [
+      module.s3_org_cloudtrail_logs.s3_bucket_arn,
+      # module.s3_org_config_logs.s3_bucket_arn,
+    ]
+  }
+}
+
+module "s3_org_config_logs" {
+  providers = { aws = aws.hubandspoke }
+
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "~> 4.3"
+
+  bucket                                = local.bucket_names["org_config"]
+  force_destroy                         = true
+  control_object_ownership              = true
+  attach_deny_insecure_transport_policy = true
+  attach_require_latest_tls_policy      = true
+  attach_policy                         = true
+  policy                                = data.aws_iam_policy_document.config_log_delivery.json
+
+  lifecycle_rule = local.lifecycle_rule
+
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        kms_master_key_id = aws_kms_key.hubandspoke_s3.arn
+        sse_algorithm     = "aws:kms"
+      }
+    }
+  }
+  logging = {
+    target_bucket = module.s3_server_access_logs.s3_bucket_id
+    target_prefix = "org-config/"
+    target_object_key_format = {
+      partitioned_prefix = {
+        partition_date_source = "DeliveryTime" # "EventTime"
+      }
+    }
+  }
+
+  versioning = {
+    enabled    = true
+    mfa_delete = false # must be false for lifecycle rules to work
+  }
+}
+
+data "aws_iam_policy_document" "ct_log_delivery" {
+  provider = aws.hubandspoke
+
+  statement {
+    sid    = "AWSLogDeliveryWrite"
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["delivery.logs.amazonaws.com"]
+    }
+
+    actions = ["s3:PutObject"]
+
+    resources = [
+      "${module.s3_org_config_logs.s3_bucket_arn}/*",
+    ]
+  }
+
+  statement {
+    sid = "AWSLogDeliveryAclCheck"
+
+    principals {
+      type        = "Service"
+      identifiers = ["delivery.logs.amazonaws.com"]
+    }
+
+    actions = ["s3:GetBucketAcl"]
+
+    resources = [
+      module.s3_org_config_logs.s3_bucket_arn,
+    ]
+  }
+}
+
+
+
+
+###############################################################################
+# Central Bucket
+#
+# Control Tower configures several types of logging:
+#   - Control Tower activity logs
+#   - Organization-level Cloudtrail covering all accounts
+#   - Multi-account AWS Config
+# All logs must be aggregated and sent to the audit account for immutable storage.
+# These resources configure a central bucket in the log account in preparation for
+# S3 batch replication to the audit account.
+#
+# TODO: add S3 batch replication from the central bucket to the audit account
+#
+# https://docs.aws.amazon.com/controltower/latest/userguide/logging-and-monitoring.html
+###############################################################################
+
+locals {
+  # Bucket name for central log collection bucket in log account
+  central_bucket_name_prefix = "${var.central_bucket_name_prefix}-${local.log_account_id}"
+}
+
+# Find the bucket where CT sends logs
+data "aws_s3_bucket" "ct_logs" {
+  provider = aws.log
+
+  bucket     = "aws-controltower-logs-${local.log_account_id}-${var.aws_region}"
+  depends_on = [aws_controltower_landing_zone.this]
+}
+
+module "central_bucket" {
+  providers = { aws = aws.log }
+
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "~> 4.3"
+
+  bucket                                = local.bucket_names["central_logs"]
+  force_destroy                         = false # prevent accidental deletion
+  control_object_ownership              = true
+  attach_deny_insecure_transport_policy = true
+  attach_require_latest_tls_policy      = true
+  attach_policy                         = true
+  policy                                = data.aws_iam_policy_document.central_logs_bucket.json
+
+  lifecycle_rule = local.lifecycle_rule
+
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        kms_master_key_id = aws_kms_key.central_log_bucket.arn
+        sse_algorithm     = "aws:kms"
+      }
+    }
+  }
+
+  # TODO: make a new bucket in the log account to track S3 access to central logs
+  # logging = {
+  #   target_bucket = module.s3_server_access_logs.s3_bucket_id
+  #   target_prefix = "s3-access/"
+  #   target_object_key_format = {
+  #     partitioned_prefix = {
+  #       partition_date_source = "DeliveryTime" # "EventTime"
+  #     }
+  #   }
+  # }
+
+  versioning = {
+    enabled    = true
+    mfa_delete = false # must be false for lifecycle rules to work
+  }
+}
+
+
+# Aggregate CT logs to central bucket. If we need to distribute the org-level
+# Cloudtrail logs to each account we can add more replication rules see link below:
+# - https://repost.aws/questions/QU_Q-w35OWRhW75A69-4Kfhw/control-tower-log-sharing-with-individual-accounts
+resource "aws_s3_bucket_replication_configuration" "ct_to_central" {
+  provider = aws.log
+
+  role   = aws_iam_role.ct_to_central.arn
+  bucket = data.aws_s3_bucket.ct_logs.id
+
+  rule {
+    id     = "everything"
+    status = "Enabled"
+    filter {}
+    delete_marker_replication {
+      status = "Enabled"
+    }
+    source_selection_criteria {
+      replica_modifications {
+        status = "Enabled"
+      }
+      sse_kms_encrypted_objects {
+        status = "Enabled"
+      }
+    }
+
+    destination {
+      bucket        = module.central_bucket.s3_bucket_arn
+      storage_class = "STANDARD"
+      account       = data.aws_caller_identity.log.account_id
+      encryption_configuration {
+        replica_kms_key_id = aws_kms_key.central_log_bucket.arn
+      }
+      access_control_translation {
+        owner = "Destination"
+      }
+    }
+  }
+}
+
+
+###############################################################################
+#
+# Below resources allows S3 in the hub-and-spoke accounts to replicate logs to
 # the log archive account.
 #
 # REFS:
@@ -645,348 +1025,4 @@ resource "aws_iam_role_policy_attachment" "central_logs" {
 
   role       = aws_iam_role.central_logs.name
   policy_arn = aws_iam_policy.central_logs.arn
-}
-
-
-###############################################################################
-# KMS for hubandspoke log object encryption
-###############################################################################
-
-resource "aws_kms_alias" "hubandspoke_s3" {
-  provider = aws.hubandspoke
-
-  name          = "alias/hubandspoke-log-objects-${var.identifier}"
-  target_key_id = aws_kms_key.hubandspoke_s3.key_id
-}
-
-resource "aws_kms_key" "hubandspoke_s3" {
-  provider = aws.hubandspoke
-
-  description             = "KMS key is used to encrypt hubandspoke log bucket objects"
-  deletion_window_in_days = 7
-  enable_key_rotation     = true
-
-  tags = {
-    Name = "hubandspoke-log-objects-${var.identifier}"
-  }
-}
-
-resource "aws_kms_key_policy" "hubandspoke_s3" {
-  provider = aws.hubandspoke
-
-  key_id = aws_kms_key.hubandspoke_s3.key_id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Id      = "hubandspoke-log-objects-key-policy"
-    Statement = [
-      {
-        Sid    = "Enable IAM User Permissions"
-        Effect = "Allow"
-        Principal = {
-          AWS = [
-            data.aws_caller_identity.hubandspoke.arn,
-            "arn:${data.aws_partition.hubandspoke.partition}:iam::${data.aws_caller_identity.hubandspoke.account_id}:root"
-          ]
-        }
-        Action = [
-          "kms:Encrypt",
-          "kms:Decrypt",
-          "kms:ReEncrypt*",
-          "kms:GenerateDataKey*",
-          "kms:CreateGrant",
-          "kms:DescribeKey"
-        ]
-        Resource = "*"
-      },
-      {
-        Sid    = "Allow access for Key Administrators"
-        Effect = "Allow"
-        Principal = {
-          AWS = concat([
-            [data.aws_caller_identity.hubandspoke.arn],
-            var.key_admin_arns,
-          ])
-        }
-        Action = [
-          "kms:Create*",
-          "kms:Describe*",
-          "kms:Enable*",
-          "kms:List*",
-          "kms:Put*",
-          "kms:Update*",
-          "kms:Revoke*",
-          "kms:Disable*",
-          "kms:Get*",
-          "kms:Delete*",
-          "kms:TagResource",
-          "kms:UntagResource",
-          "kms:ScheduleKeyDeletion",
-          "kms:CancelKeyDeletion"
-        ]
-        Resource = "*"
-      },
-      {
-        Sid    = "Allow services to use the key"
-        Effect = "Allow"
-        Principal = {
-          Service = [
-            "s3.amazonaws.com",
-            "delivery.logs.amazonaws.com"
-          ]
-        }
-        Action = [
-          "kms:Encrypt",
-          "kms:Decrypt",
-          "kms:ReEncrypt*",
-          "kms:GenerateDataKey*",
-          "kms:DescribeKey"
-        ]
-        Resource = "*"
-        Condition = {
-          StringEquals = {
-            "aws:PrincipalOrgID" = data.aws_organizations_organization.hubandspoke.id
-          }
-        }
-      }
-    ]
-  })
-}
-
-
-###############################################################################
-# Cloudtrail and Config
-#
-# These buckets are created in the hubandspoke account to receive replicated
-# logs from the control Tower bucket in the log archive account. This makes it
-# easier to ingest those logs into Splunk, and ensures that any meaningful
-# infrastructure remains within the hubandspoke account where it is monitored.
-###############################################################################
-
-module "s3_org_cloudtrail_logs" {
-  providers = { aws = aws.hubandspoke }
-
-  source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 4.3"
-
-  bucket                                = local.bucket_names["org_cloudtrail"]
-  force_destroy                         = true
-  control_object_ownership              = true
-  attach_deny_insecure_transport_policy = true
-  attach_require_latest_tls_policy      = true
-  attach_policy                         = true
-  policy                                = data.aws_iam_policy_document.log_delivery.json
-
-  lifecycle_rule = local.lifecycle_rule
-
-  server_side_encryption_configuration = {
-    rule = {
-      apply_server_side_encryption_by_default = {
-        kms_master_key_id = aws_kms_key.hubandspoke_s3.arn
-        sse_algorithm     = "aws:kms"
-      }
-    }
-  }
-  logging = {
-    target_bucket = module.s3_server_access_logs.s3_bucket_id
-    target_prefix = "org-cloudtrail/"
-    target_object_key_format = {
-      partitioned_prefix = {
-        partition_date_source = "DeliveryTime" # "EventTime"
-      }
-    }
-  }
-
-  versioning = {
-    enabled    = true
-    mfa_delete = false # must be false for lifecycle rules to work
-  }
-}
-
-module "s3_org_config_logs" {
-  providers = { aws = aws.hubandspoke }
-
-  source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 4.3"
-
-  bucket                                = local.bucket_names["org_config"]
-  force_destroy                         = true
-  control_object_ownership              = true
-  attach_deny_insecure_transport_policy = true
-  attach_require_latest_tls_policy      = true
-  attach_policy                         = true
-  policy                                = data.aws_iam_policy_document.log_delivery.json
-
-  lifecycle_rule = local.lifecycle_rule
-
-  server_side_encryption_configuration = {
-    rule = {
-      apply_server_side_encryption_by_default = {
-        kms_master_key_id = aws_kms_key.hubandspoke_s3.arn
-        sse_algorithm     = "aws:kms"
-      }
-    }
-  }
-  logging = {
-    target_bucket = module.s3_server_access_logs.s3_bucket_id
-    target_prefix = "org-config/"
-    target_object_key_format = {
-      partitioned_prefix = {
-        partition_date_source = "DeliveryTime" # "EventTime"
-      }
-    }
-  }
-
-  versioning = {
-    enabled    = true
-    mfa_delete = false # must be false for lifecycle rules to work
-  }
-}
-
-# Bucket policy to allow S3 service in the log account to replicate logs to the hubandspoke account
-data "aws_iam_policy_document" "log_delivery" {
-  provider = aws.hubandspoke
-
-  statement {
-    sid    = "AWSLogDeliveryWrite"
-    effect = "Allow"
-
-    principals {
-      type        = "Service"
-      identifiers = ["delivery.logs.amazonaws.com"]
-    }
-
-    actions = ["s3:PutObject"]
-
-    resources = [
-      "${module.s3_org_cloudtrail_logs.s3_bucket_arn}/*",
-      "${module.s3_org_config_logs.s3_bucket_arn}/*",
-    ]
-  }
-
-  statement {
-    sid = "AWSLogDeliveryAclCheck"
-
-    principals {
-      type        = "Service"
-      identifiers = ["delivery.logs.amazonaws.com"]
-    }
-
-    actions = ["s3:GetBucketAcl"]
-
-    resources = [
-      module.s3_org_cloudtrail_logs.s3_bucket_arn,
-      module.s3_org_config_logs.s3_bucket_arn,
-    ]
-  }
-}
-
-
-###############################################################################
-# Central Bucket
-#
-# Control Tower configures several types of logging:
-#   - Control Tower activity logs
-#   - Organization-level Cloudtrail covering all accounts
-#   - Multi-account AWS Config
-# All logs must be aggregated and sent to the audit account for immutable storage.
-# These resources configure a central bucket in the log account in preparation for
-# S3 batch replication to the audit account.
-#
-# TODO: add S3 batch replication from the central bucket to the audit account
-#
-# https://docs.aws.amazon.com/controltower/latest/userguide/logging-and-monitoring.html
-###############################################################################
-
-locals {
-  # Bucket name for central log collection bucket in log account
-  central_bucket_name_prefix = "${var.central_bucket_name_prefix}-${local.log_account_id}"
-}
-
-# Find the bucket where CT sends logs
-data "aws_s3_bucket" "ct_logs" {
-  provider = aws.log
-
-  bucket     = "aws-controltower-logs-${local.log_account_id}-${var.aws_region}"
-  depends_on = [aws_controltower_landing_zone.this]
-}
-
-module "central_bucket" {
-  providers = { aws = aws.log }
-
-  source  = "terraform-aws-modules/s3-bucket/aws"
-  version = "~> 4.3"
-
-  bucket                                = local.bucket_names["central_logs"]
-  force_destroy                         = false # prevent accidental deletion
-  control_object_ownership              = true
-  attach_deny_insecure_transport_policy = true
-  attach_require_latest_tls_policy      = true
-  attach_policy                         = true
-  policy                                = data.aws_iam_policy_document.central_logs_bucket.json
-
-  lifecycle_rule = local.lifecycle_rule
-
-  server_side_encryption_configuration = {
-    rule = {
-      apply_server_side_encryption_by_default = {
-        kms_master_key_id = aws_kms_key.central_log_bucket.arn
-        sse_algorithm     = "aws:kms"
-      }
-    }
-  }
-
-  logging = {
-    target_bucket = module.s3_server_access_logs.s3_bucket_id
-    target_prefix = "s3-access/"
-    target_object_key_format = {
-      partitioned_prefix = {
-        partition_date_source = "DeliveryTime" # "EventTime"
-      }
-    }
-  }
-
-  versioning = {
-    enabled    = true
-    mfa_delete = false # must be false for lifecycle rules to work
-  }
-}
-
-
-# Aggregate CT logs to central bucket. If we need to distribute the org-level
-# Cloudtrail logs to each account we can add more replication rules see link below:
-# - https://repost.aws/questions/QU_Q-w35OWRhW75A69-4Kfhw/control-tower-log-sharing-with-individual-accounts
-resource "aws_s3_bucket_replication_configuration" "ct_to_central" {
-  provider = aws.log
-
-  role   = aws_iam_role.ct_to_central.arn
-  bucket = data.aws_s3_bucket.ct_logs.id
-
-  rule {
-    id     = "everything"
-    status = "Enabled"
-    filter {}
-    delete_marker_replication {
-      status = "Enabled"
-    }
-    source_selection_criteria {
-      replica_modifications {
-        status = "Enabled"
-      }
-      sse_kms_encrypted_objects {
-        status = "Enabled"
-      }
-    }
-
-    destination {
-      bucket        = module.central_bucket.s3_bucket_arn
-      storage_class = "STANDARD"
-      account       = data.aws_caller_identity.log.account_id
-      encryption_configuration {
-        replica_kms_key_id = aws_kms_key.central_log_bucket.arn
-      }
-      access_control_translation {
-        owner = "Destination"
-      }
-    }
-  }
 }
