@@ -20,7 +20,7 @@ locals {
   central_logs_config = {
     bucket             = "arn:${data.aws_partition.log.partition}:s3:::${local.bucket_names["central_logs"]}"
     storage_class      = "STANDARD"
-    replica_kms_key_id = "arn:${data.aws_partition.log.partition}:kms:${data.aws_region.name}:${var.account_id_map["log"]}:alias/central-log-objects"
+    replica_kms_key_id = "arn:${data.aws_partition.log.partition}:kms:${data.aws_region.log.name}:${var.account_id_map["log"]}:alias/central-log-objects"
     account_id         = var.account_id_map["log"]
 
     access_control_translation = {
@@ -627,7 +627,7 @@ data "aws_iam_policy_document" "central_logs" {
 
     resources = [
       aws_kms_key.hubandspoke_s3.arn,
-      aws_kms_key.central_bucket.arn,
+      aws_kms_key.central_log_bucket.arn,
     ]
   }
 }

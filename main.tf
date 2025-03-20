@@ -26,6 +26,7 @@ data "aws_caller_identity" "audit" { provider = aws.audit }
 data "aws_caller_identity" "management" { provider = aws.management }
 data "aws_caller_identity" "hubandspoke" { provider = aws.hubandspoke }
 
+data "aws_region" "log" { provider = aws.log }
 data "aws_region" "audit" { provider = aws.audit }
 data "aws_region" "hubandspoke" { provider = aws.hubandspoke }
 
