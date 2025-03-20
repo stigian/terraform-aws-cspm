@@ -66,7 +66,7 @@ resource "aws_organizations_organization" "this" {
 resource "aws_guardduty_organization_admin_account" "this" {
   provider         = aws.management         # from
   admin_account_id = local.audit_account_id # to
-  depends_on       = [aws_organizations_organization.management]
+  depends_on       = [aws_organizations_organization.this]
 }
 
 resource "aws_guardduty_organization_configuration" "this" {
@@ -113,7 +113,7 @@ resource "aws_detective_organization_admin_account" "this" {
   provider   = aws.management         # from
   account_id = local.audit_account_id # to
   depends_on = [
-    aws_organizations_organization.management,
+    aws_organizations_organization.this,
     aws_guardduty_organization_configuration.this,
   ]
 }
@@ -144,7 +144,7 @@ resource "aws_detective_organization_configuration" "this" {
 resource "aws_inspector2_delegated_admin_account" "this" {
   provider   = aws.management         # from
   account_id = local.audit_account_id # to
-  depends_on = [aws_organizations_organization.management]
+  depends_on = [aws_organizations_organization.this]
 }
 
 resource "aws_inspector2_organization_configuration" "this" {
@@ -267,14 +267,14 @@ resource "aws_organizations_delegated_administrator" "config" {
   provider          = aws.management         # from
   account_id        = local.audit_account_id # to
   service_principal = "config.amazonaws.com"
-  depends_on        = [aws_organizations_organization.management]
+  depends_on        = [aws_organizations_organization.this]
 }
 
 resource "aws_organizations_delegated_administrator" "config_multiaccountsetup" {
   provider          = aws.management         # from
   account_id        = local.audit_account_id # to
   service_principal = "config-multiaccountsetup.amazonaws.com"
-  depends_on        = [aws_organizations_organization.management]
+  depends_on        = [aws_organizations_organization.this]
 }
 
 # https://github.com/hashicorp/terraform-provider-aws/issues/24545
@@ -294,7 +294,7 @@ resource "aws_config_organization_conformance_pack" "nist_800_53" {
 
   depends_on = [
     aws_controltower_landing_zone.this,
-    aws_organizations_organization.management,
+    aws_organizations_organization.this,
     aws_organizations_delegated_administrator.config,
     aws_organizations_delegated_administrator.config_multiaccountsetup,
   ]
@@ -311,7 +311,7 @@ resource "aws_config_organization_conformance_pack" "nist_800_53" {
 # resource "aws_securityhub_organization_admin_account" "this" {
 #   provider         = aws.management
 #   admin_account_id = local.audit_account_id
-#   depends_on       = [aws_organizations_organization.management]
+#   depends_on       = [aws_organizations_organization.this]
 # }
 
 # Already exists via Control Tower
