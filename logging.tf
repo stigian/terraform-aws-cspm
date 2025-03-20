@@ -68,7 +68,7 @@ locals {
 ###############################################################################
 
 module "s3_server_access_logs" {
-  providers = { aws.hubandspoke = aws.hubandspoke }
+  providers = { aws = aws.hubandspoke }
 
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.3"
@@ -125,7 +125,7 @@ module "s3_server_access_logs" {
 ###############################################################################
 
 module "s3_vpc_flow_logs" {
-  providers = { aws.hubandspoke = aws.hubandspoke }
+  providers = { aws = aws.hubandspoke }
 
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.3"
@@ -228,7 +228,7 @@ data "aws_iam_policy_document" "s3_vpc_flow_logs" {
 ###############################################################################
 
 module "s3_lb_logs" {
-  providers = { aws.hubandspoke = aws.hubandspoke }
+  providers = { aws = aws.hubandspoke }
 
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.3"
@@ -294,7 +294,7 @@ module "s3_lb_logs" {
 ###############################################################################
 
 module "s3_waf_logs" {
-  providers = { aws.hubandspoke = aws.hubandspoke }
+  providers = { aws = aws.hubandspoke }
 
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.3"
@@ -417,7 +417,7 @@ data "aws_iam_policy_document" "waf_logs" {
 ###############################################################################
 
 module "s3_anfw_logs" {
-  providers = { aws.hubandspoke = aws.hubandspoke }
+  providers = { aws = aws.hubandspoke }
 
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.3"
@@ -600,7 +600,8 @@ data "aws_iam_policy_document" "central_logs" {
     ]
 
     resources = [
-      "arn:${data.aws_partition.log.partition}:s3:::${local.bucket_names["central_logs"]}/*",
+      "arn:aws-us-gov:s3:::${local.bucket_names["central_logs"]}/*",
+      # "arn:${data.aws_partition.log.partition}:s3:::${local.bucket_names["central_logs"]}/*",
     ]
   }
 
@@ -743,7 +744,7 @@ resource "aws_kms_key_policy" "hubandspoke_s3" {
         Resource = "*"
         Condition = {
           StringEquals = {
-            "aws:PrincipalOrgID" = data.aws_organizations_organization.this.id
+            "aws:PrincipalOrgID" = data.aws_organizations_organization.hubandspoke.id
           }
         }
       }
@@ -762,7 +763,7 @@ resource "aws_kms_key_policy" "hubandspoke_s3" {
 ###############################################################################
 
 module "s3_org_cloudtrail_logs" {
-  providers = { aws.hubandspoke = aws.hubandspoke }
+  providers = { aws = aws.hubandspoke }
 
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.3"
@@ -802,7 +803,7 @@ module "s3_org_cloudtrail_logs" {
 }
 
 module "s3_org_config_logs" {
-  providers = { aws.hubandspoke = aws.hubandspoke }
+  providers = { aws = aws.hubandspoke }
 
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.3"
@@ -910,7 +911,7 @@ data "aws_s3_bucket" "ct_logs" {
 }
 
 module "central_bucket" {
-  providers = { aws.log = aws.log }
+  providers = { aws = aws.log }
 
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.3"

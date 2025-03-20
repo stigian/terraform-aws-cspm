@@ -30,7 +30,8 @@ data "aws_region" "log" { provider = aws.log }
 data "aws_region" "audit" { provider = aws.audit }
 data "aws_region" "hubandspoke" { provider = aws.hubandspoke }
 
-data "aws_organizations_organization" "this" { provider = aws.management }
+data "aws_organizations_organization" "hubandspoke" { provider = aws.hubandspoke }
+data "aws_organizations_organization" "management" { provider = aws.management }
 
 # Also enables Trusted Access in the management account.
 resource "aws_organizations_organization" "this" {
@@ -65,7 +66,7 @@ resource "aws_organizations_organization" "this" {
 resource "aws_guardduty_organization_admin_account" "this" {
   provider         = aws.management         # from
   admin_account_id = local.audit_account_id # to
-  depends_on       = [aws_organizations_organization.this]
+  depends_on       = [aws_organizations_organization.management]
 }
 
 resource "aws_guardduty_organization_configuration" "this" {
@@ -112,7 +113,7 @@ resource "aws_detective_organization_admin_account" "this" {
   provider   = aws.management         # from
   account_id = local.audit_account_id # to
   depends_on = [
-    aws_organizations_organization.this,
+    aws_organizations_organization.management,
     aws_guardduty_organization_configuration.this,
   ]
 }
@@ -143,7 +144,7 @@ resource "aws_detective_organization_configuration" "this" {
 resource "aws_inspector2_delegated_admin_account" "this" {
   provider   = aws.management         # from
   account_id = local.audit_account_id # to
-  depends_on = [aws_organizations_organization.this]
+  depends_on = [aws_organizations_organization.management]
 }
 
 resource "aws_inspector2_organization_configuration" "this" {
@@ -244,7 +245,7 @@ resource "aws_controltower_landing_zone" "this" {
 
 data "aws_organizations_organizational_units" "this" {
   provider  = aws.management
-  parent_id = data.aws_organizations_organization.this.roots[0].id
+  parent_id = data.aws_organizations_organization.management.roots[0].id
 }
 
 # data "aws_controltower_controls" "this" {
@@ -266,14 +267,14 @@ resource "aws_organizations_delegated_administrator" "config" {
   provider          = aws.management         # from
   account_id        = local.audit_account_id # to
   service_principal = "config.amazonaws.com"
-  depends_on        = [aws_organizations_organization.this]
+  depends_on        = [aws_organizations_organization.management]
 }
 
 resource "aws_organizations_delegated_administrator" "config_multiaccountsetup" {
   provider          = aws.management         # from
   account_id        = local.audit_account_id # to
   service_principal = "config-multiaccountsetup.amazonaws.com"
-  depends_on        = [aws_organizations_organization.this]
+  depends_on        = [aws_organizations_organization.management]
 }
 
 # https://github.com/hashicorp/terraform-provider-aws/issues/24545
@@ -293,7 +294,7 @@ resource "aws_config_organization_conformance_pack" "nist_800_53" {
 
   depends_on = [
     aws_controltower_landing_zone.this,
-    aws_organizations_organization.this,
+    aws_organizations_organization.management,
     aws_organizations_delegated_administrator.config,
     aws_organizations_delegated_administrator.config_multiaccountsetup,
   ]
@@ -310,7 +311,7 @@ resource "aws_config_organization_conformance_pack" "nist_800_53" {
 # resource "aws_securityhub_organization_admin_account" "this" {
 #   provider         = aws.management
 #   admin_account_id = local.audit_account_id
-#   depends_on       = [aws_organizations_organization.this]
+#   depends_on       = [aws_organizations_organization.management]
 # }
 
 # Already exists via Control Tower
@@ -356,7 +357,7 @@ resource "aws_securityhub_configuration_policy" "this" {
 # account -> Security Hub -> Settings -> Configuration -> Organization tab.
 resource "aws_securityhub_configuration_policy_association" "root" {
   provider  = aws.audit
-  target_id = data.aws_organizations_organization.this.roots[0].id
+  target_id = data.aws_organizations_organization.management.roots[0].id
   policy_id = aws_securityhub_configuration_policy.this.id
 }
 
