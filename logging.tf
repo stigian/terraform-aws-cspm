@@ -68,7 +68,7 @@ locals {
 ###############################################################################
 
 module "s3_server_access_logs" {
-  providers = { aws = aws.hubandspoke }
+  providers = { aws.hubandspoke = aws.hubandspoke }
 
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.3"
@@ -125,7 +125,7 @@ module "s3_server_access_logs" {
 ###############################################################################
 
 module "s3_vpc_flow_logs" {
-  providers = { aws = aws.hubandspoke }
+  providers = { aws.hubandspoke = aws.hubandspoke }
 
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.3"
@@ -228,7 +228,7 @@ data "aws_iam_policy_document" "s3_vpc_flow_logs" {
 ###############################################################################
 
 module "s3_lb_logs" {
-  providers = { aws = aws.hubandspoke }
+  providers = { aws.hubandspoke = aws.hubandspoke }
 
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.3"
@@ -294,7 +294,7 @@ module "s3_lb_logs" {
 ###############################################################################
 
 module "s3_waf_logs" {
-  providers = { aws = aws.hubandspoke }
+  providers = { aws.hubandspoke = aws.hubandspoke }
 
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.3"
@@ -417,7 +417,7 @@ data "aws_iam_policy_document" "waf_logs" {
 ###############################################################################
 
 module "s3_anfw_logs" {
-  providers = { aws = aws.hubandspoke }
+  providers = { aws.hubandspoke = aws.hubandspoke }
 
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.3"
@@ -762,9 +762,10 @@ resource "aws_kms_key_policy" "hubandspoke_s3" {
 ###############################################################################
 
 module "s3_org_cloudtrail_logs" {
-  providers = { aws = aws.hubandspoke }
-  source    = "terraform-aws-modules/s3-bucket/aws"
-  version   = "~> 4.3"
+  providers = { aws.hubandspoke = aws.hubandspoke }
+
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "~> 4.3"
 
   bucket                                = local.bucket_names["org_cloudtrail"]
   force_destroy                         = true
@@ -801,9 +802,10 @@ module "s3_org_cloudtrail_logs" {
 }
 
 module "s3_org_config_logs" {
-  providers = { aws = aws.hubandspoke }
-  source    = "terraform-aws-modules/s3-bucket/aws"
-  version   = "~> 4.3"
+  providers = { aws.hubandspoke = aws.hubandspoke }
+
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "~> 4.3"
 
   bucket                                = local.bucket_names["org_config"]
   force_destroy                         = true
@@ -901,13 +903,14 @@ locals {
 
 # Find the bucket where CT sends logs
 data "aws_s3_bucket" "ct_logs" {
-  provider   = aws.log
+  provider = aws.log
+
   bucket     = "aws-controltower-logs-${local.log_account_id}-${var.aws_region}"
   depends_on = [aws_controltower_landing_zone.this]
 }
 
 module "central_bucket" {
-  providers = { aws = aws.log }
+  providers = { aws.log = aws.log }
 
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 4.3"
