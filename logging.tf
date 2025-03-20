@@ -563,9 +563,9 @@ data "aws_iam_policy_document" "central_logs" {
     ]
 
     resources = [
-      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["access_logs"]}",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["s3_access_logs"]}",
       "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["lb_logs"]}",
-      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["flow_logs"]}",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["vpc_flow_logs"]}",
       "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["waf_logs"]}",
       "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["anfw_logs"]}",
     ]
@@ -581,9 +581,9 @@ data "aws_iam_policy_document" "central_logs" {
     ]
 
     resources = [
-      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["access_logs"]}/*",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["s3_access_logs"]}/*",
       "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["lb_logs"]}/*",
-      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["flow_logs"]}/*",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["vpc_flow_logs"]}/*",
       "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["waf_logs"]}/*",
       "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["anfw_logs"]}/*",
     ]
