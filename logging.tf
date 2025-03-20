@@ -2,9 +2,6 @@
 #   - https://aws.amazon.com/blogs/publicsector/aws-federal-customers-memorandum-m-21-31/
 #   - https://bidenwhitehouse.archives.gov/wp-content/uploads/2021/08/M-21-31-Improving-the-Federal-Governments-Investigative-and-Remediation-Capabilities-Related-to-Cybersecurity-Incidents.pdf
 
-data "aws_region" "current" {}
-data "aws_partition" "current" {}
-
 locals {
 
   # These buckets are created ahead of time by the CSPM module.
@@ -21,9 +18,9 @@ locals {
   }
 
   central_logs_config = {
-    bucket             = "arn:${data.aws_partition.current.partition}:s3:::${local.bucket_names["central_logs"]}"
+    bucket             = "arn:${data.aws_partition.log.partition}:s3:::${local.bucket_names["central_logs"]}"
     storage_class      = "STANDARD"
-    replica_kms_key_id = "arn:${data.aws_partition.current.partition}:kms:${data.aws_region.name}:${var.account_id_map["log"]}:alias/central-log-objects"
+    replica_kms_key_id = "arn:${data.aws_partition.log.partition}:kms:${data.aws_region.name}:${var.account_id_map["log"]}:alias/central-log-objects"
     account_id         = var.account_id_map["log"]
 
     access_control_translation = {
@@ -83,8 +80,8 @@ module "s3_server_access_logs" {
   attach_access_log_delivery_policy          = true
   attach_deny_insecure_transport_policy      = true
   attach_require_latest_tls_policy           = true
-  access_log_delivery_policy_source_accounts = [data.aws_caller_identity.current.account_id]
-  access_log_delivery_policy_source_buckets  = [] # ["arn:${data.aws_partition.current.partition}:s3:::${TODO}"]
+  access_log_delivery_policy_source_accounts = [data.aws_caller_identity.hubandspoke.account_id]
+  access_log_delivery_policy_source_buckets  = [] # ["arn:${data.aws_partition.hubandspoke.partition}:s3:::${TODO}"]
 
   server_side_encryption_configuration = {
     rule = {
@@ -204,7 +201,7 @@ data "aws_iam_policy_document" "s3_vpc_flow_logs" {
 
     resources = [
       "${module.s3_vpc_flow_logs.s3_bucket_arn}/AWSLogs/*",
-      # "arn:${data.aws_partition.current.partition}:s3:::${local.bucket_names["vpc_flow_logs"]}/AWSLogs/*"
+      # "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["vpc_flow_logs"]}/AWSLogs/*"
     ]
   }
 
@@ -371,7 +368,7 @@ data "aws_iam_policy_document" "waf_logs" {
       "s3:PutObject",
     ]
     resources = [
-      "arn:${data.aws_partition.current.partition}:s3:::${local.bucket_names["waf_logs"]}/AWSLogs/${data.aws_caller_identity.current.account_id}/*",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["waf_logs"]}/AWSLogs/${data.aws_caller_identity.hubandspoke.account_id}/*",
     ]
     condition {
       test     = "StringEquals"
@@ -381,12 +378,12 @@ data "aws_iam_policy_document" "waf_logs" {
     condition {
       test     = "StringEquals"
       variable = "aws:SourceAccount"
-      values   = ["${data.aws_caller_identity.current.account_id}"]
+      values   = ["${data.aws_caller_identity.hubandspoke.account_id}"]
     }
     condition {
       test     = "ArnLike"
       variable = "aws:SourceArn"
-      values   = ["arn:${data.aws_partition.current.partition}:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"]
+      values   = ["arn:${data.aws_partition.hubandspoke.partition}:logs:${data.aws_region.hubandspoke.name}:${data.aws_caller_identity.hubandspoke.account_id}:*"]
     }
   }
 
@@ -399,17 +396,17 @@ data "aws_iam_policy_document" "waf_logs" {
     }
     actions = ["s3:GetBucketAcl"]
     resources = [
-      "arn:${data.aws_partition.current.partition}:s3:::${local.bucket_names["waf_logs"]}",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["waf_logs"]}",
     ]
     condition {
       test     = "StringEquals"
       variable = "aws:SourceAccount"
-      values   = ["${data.aws_caller_identity.current.account_id}"]
+      values   = ["${data.aws_caller_identity.hubandspoke.account_id}"]
     }
     condition {
       test     = "ArnLike"
       variable = "aws:SourceArn"
-      values   = ["arn:${data.aws_partition.current.partition}:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"]
+      values   = ["arn:${data.aws_partition.hubandspoke.partition}:logs:${data.aws_region.hubandspoke.name}:${data.aws_caller_identity.hubandspoke.account_id}:*"]
     }
   }
 }
@@ -495,7 +492,7 @@ data "aws_iam_policy_document" "anfw_logs" {
       "s3:PutObject",
     ]
     resources = [
-      "arn:${data.aws_partition.current.partition}:s3:::${local.bucket_names["anfw_logs"]}/AWSLogs/${data.aws_caller_identity.current.account_id}/*",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["anfw_logs"]}/AWSLogs/${data.aws_caller_identity.hubandspoke.account_id}/*",
     ]
     condition {
       test     = "StringEquals"
@@ -513,7 +510,7 @@ data "aws_iam_policy_document" "anfw_logs" {
     }
     actions = ["s3:GetBucketAcl"]
     resources = [
-      "arn:${data.aws_partition.current.partition}:s3:::${local.bucket_names["anfw_logs"]}",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["anfw_logs"]}",
     ]
   }
 }
@@ -532,7 +529,7 @@ data "aws_iam_policy_document" "anfw_logs" {
 ###############################################################################
 
 data "aws_iam_policy_document" "central_logs_assume_role" {
-  provider = aws.log
+  provider = aws.hubandspoke
 
   statement {
     effect = "Allow"
@@ -547,14 +544,14 @@ data "aws_iam_policy_document" "central_logs_assume_role" {
 }
 
 resource "aws_iam_role" "central_logs" {
-  provider = aws.log
+  provider = aws.hubandspoke
 
-  name               = "hubandspoke-central-logs-replication"
+  name               = "hubandspoke-log-replication"
   assume_role_policy = data.aws_iam_policy_document.central_logs_assume_role.json
 }
 
 data "aws_iam_policy_document" "central_logs" {
-  provider = aws.log
+  provider = aws.hubandspoke
 
   statement {
     effect = "Allow"
@@ -565,11 +562,11 @@ data "aws_iam_policy_document" "central_logs" {
     ]
 
     resources = [
-      "arn:${data.aws_partition.current.partition}:s3:::${local.bucket_names["access_logs"]}",
-      "arn:${data.aws_partition.current.partition}:s3:::${local.bucket_names["lb_logs"]}",
-      "arn:${data.aws_partition.current.partition}:s3:::${local.bucket_names["flow_logs"]}",
-      "arn:${data.aws_partition.current.partition}:s3:::${local.bucket_names["waf_logs"]}",
-      "arn:${data.aws_partition.current.partition}:s3:::${local.bucket_names["anfw_logs"]}",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["access_logs"]}",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["lb_logs"]}",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["flow_logs"]}",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["waf_logs"]}",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["anfw_logs"]}",
     ]
   }
 
@@ -583,11 +580,11 @@ data "aws_iam_policy_document" "central_logs" {
     ]
 
     resources = [
-      "arn:${data.aws_partition.current.partition}:s3:::${local.bucket_names["access_logs"]}/*",
-      "arn:${data.aws_partition.current.partition}:s3:::${local.bucket_names["lb_logs"]}/*",
-      "arn:${data.aws_partition.current.partition}:s3:::${local.bucket_names["flow_logs"]}/*",
-      "arn:${data.aws_partition.current.partition}:s3:::${local.bucket_names["waf_logs"]}/*",
-      "arn:${data.aws_partition.current.partition}:s3:::${local.bucket_names["anfw_logs"]}/*",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["access_logs"]}/*",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["lb_logs"]}/*",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["flow_logs"]}/*",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["waf_logs"]}/*",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["anfw_logs"]}/*",
     ]
   }
 
@@ -602,7 +599,7 @@ data "aws_iam_policy_document" "central_logs" {
     ]
 
     resources = [
-      "arn:${data.aws_partition.current.partition}:s3:::${local.bucket_names["central_logs"]}/*",
+      "arn:${data.aws_partition.log.partition}:s3:::${local.bucket_names["central_logs"]}/*",
     ]
   }
 
@@ -635,14 +632,14 @@ data "aws_iam_policy_document" "central_logs" {
 }
 
 resource "aws_iam_policy" "central_logs" {
-  provider = aws.log
+  provider = aws.hubandspoke
 
   name   = "${local.bucket_names["central_logs"]}-policy"
   policy = data.aws_iam_policy_document.central_logs.json
 }
 
 resource "aws_iam_role_policy_attachment" "central_logs" {
-  provider = aws.log
+  provider = aws.hubandspoke
 
   role       = aws_iam_role.central_logs.name
   policy_arn = aws_iam_policy.central_logs.arn
@@ -685,8 +682,8 @@ resource "aws_kms_key_policy" "hubandspoke_s3" {
         Effect = "Allow"
         Principal = {
           AWS = [
-            data.aws_caller_identity.current.arn,
-            "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:root"
+            data.aws_caller_identity.hubandspoke.arn,
+            "arn:${data.aws_partition.hubandspoke.partition}:iam::${data.aws_caller_identity.hubandspoke.account_id}:root"
           ]
         }
         Action = [
@@ -704,7 +701,7 @@ resource "aws_kms_key_policy" "hubandspoke_s3" {
         Effect = "Allow"
         Principal = {
           AWS = concat([
-            [data.aws_caller_identity.current.arn],
+            [data.aws_caller_identity.hubandspoke.arn],
             var.key_admin_arns,
           ])
         }
@@ -745,7 +742,7 @@ resource "aws_kms_key_policy" "hubandspoke_s3" {
         Resource = "*"
         Condition = {
           StringEquals = {
-            "aws:PrincipalOrgID" = data.aws_organizations_organization.current.id
+            "aws:PrincipalOrgID" = data.aws_organizations_organization.hubandspoke.id
           }
         }
       }
@@ -841,8 +838,10 @@ module "s3_org_config_logs" {
   }
 }
 
-# Allows S3 service in the log account to replicate logs to the hubandspoke account
+# Bucket policy to allow S3 service in the log account to replicate logs to the hubandspoke account
 data "aws_iam_policy_document" "log_delivery" {
+  provider = aws.hubandspoke
+
   statement {
     sid    = "AWSLogDeliveryWrite"
     effect = "Allow"
@@ -874,5 +873,115 @@ data "aws_iam_policy_document" "log_delivery" {
       module.s3_org_cloudtrail_logs.s3_bucket_arn,
       module.s3_org_config_logs.s3_bucket_arn,
     ]
+  }
+}
+
+
+###############################################################################
+# Central Bucket
+#
+# Control Tower configures several types of logging:
+#   - Control Tower activity logs
+#   - Organization-level Cloudtrail covering all accounts
+#   - Multi-account AWS Config
+# All logs must be aggregated and sent to the audit account for immutable storage.
+# These resources configure a central bucket in the log account in preparation for
+# S3 batch replication to the audit account.
+#
+# TODO: add S3 batch replication from the central bucket to the audit account
+#
+# https://docs.aws.amazon.com/controltower/latest/userguide/logging-and-monitoring.html
+###############################################################################
+
+locals {
+  # Bucket name for central log collection bucket in log account
+  central_bucket_name_prefix = "${var.central_bucket_name_prefix}-${local.log_account_id}"
+}
+
+# Find the bucket where CT sends logs
+data "aws_s3_bucket" "ct_logs" {
+  provider   = aws.log
+  bucket     = "aws-controltower-logs-${local.log_account_id}-${var.aws_region}"
+  depends_on = [aws_controltower_landing_zone.this]
+}
+
+module "central_bucket" {
+  providers = { aws = aws.log }
+
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "~> 4.3"
+
+  bucket                                = local.bucket_names["central_logs"]
+  force_destroy                         = false # prevent accidental deletion
+  control_object_ownership              = true
+  attach_deny_insecure_transport_policy = true
+  attach_require_latest_tls_policy      = true
+  attach_policy                         = true
+  policy                                = data.aws_iam_policy_document.central_logs_bucket.json
+
+  lifecycle_rule = local.lifecycle_rule
+
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        kms_master_key_id = aws_kms_key.central_log_bucket.arn
+        sse_algorithm     = "aws:kms"
+      }
+    }
+  }
+
+  logging = {
+    target_bucket = module.s3_server_access_logs.s3_bucket_id
+    target_prefix = "s3-access/"
+    target_object_key_format = {
+      partitioned_prefix = {
+        partition_date_source = "DeliveryTime" # "EventTime"
+      }
+    }
+  }
+
+  versioning = {
+    enabled    = true
+    mfa_delete = false # must be false for lifecycle rules to work
+  }
+}
+
+
+# Aggregate CT logs to central bucket. If we need to distribute the org-level
+# Cloudtrail logs to each account we can add more replication rules see link below:
+# - https://repost.aws/questions/QU_Q-w35OWRhW75A69-4Kfhw/control-tower-log-sharing-with-individual-accounts
+resource "aws_s3_bucket_replication_configuration" "ct_to_central" {
+  provider = aws.log
+
+  role   = aws_iam_role.ct_to_central.arn
+  bucket = data.aws_s3_bucket.ct_logs.id
+
+  rule {
+    id     = "everything"
+    status = "Enabled"
+    filter {}
+    delete_marker_replication {
+      status = "Enabled"
+    }
+    source_selection_criteria {
+      replica_modifications {
+        status = "Enabled"
+      }
+      sse_kms_encrypted_objects {
+        status = "Enabled"
+      }
+    }
+
+    destination {
+      bucket        = module.central_bucket.s3_bucket_arn
+      storage_class = "STANDARD"
+      account       = data.aws_caller_identity.log.account_id
+      encryption_configuration {
+        replica_kms_key_id = aws_kms_key.central_log_bucket.arn
+      }
+      access_control_translation {
+        owner = "Destination"
+      }
+    }
   }
 }

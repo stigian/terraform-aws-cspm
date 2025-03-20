@@ -126,9 +126,10 @@ resource "aws_kms_key_policy" "control_tower" {
         Sid    = "Allow access for Key Administrators"
         Effect = "Allow"
         Principal = {
-          AWS = [
+          AWS = concat([
             data.aws_caller_identity.management.arn,
-          ]
+            var.key_admin_arns,
+          ])
         }
         Action = [
           "kms:Create*",
@@ -225,8 +226,8 @@ resource "aws_kms_key_policy" "central_log_bucket" {
         Effect = "Allow"
         Principal = {
           AWS = [
-            "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:role/${var.replication_role_name}",
-            resource.aws_iam_role.replication.arn,
+            aws_iam_role.central_logs.arn,  # hubandspoke bucket to central bucket
+            aws_iam_role.ct_to_central.arn, # control tower bucket to central bucket
             # "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:root"
           ]
         }
@@ -265,6 +266,7 @@ resource "aws_kms_key_policy" "central_log_bucket" {
           AWS = concat(
             [data.aws_caller_identity.log.arn],            # OrganizationAccountAccessRole
             tolist(data.aws_iam_roles.log_sso_admin.arns), # AWSReservedSSO_AWSAdministratorAccess_*
+            var.key_admin_arns,
           )
         }
         Action = [
@@ -312,6 +314,7 @@ resource "aws_kms_key_policy" "central_log_bucket" {
 
 data "aws_iam_policy_document" "s3_assume_role" {
   provider = aws.log
+
   statement {
     effect = "Allow"
 
@@ -324,14 +327,16 @@ data "aws_iam_policy_document" "s3_assume_role" {
   }
 }
 
-resource "aws_iam_role" "replication" {
-  provider           = aws.log
+resource "aws_iam_role" "ct_to_central" {
+  provider = aws.log
+
   name               = "ct-central-logs-replication"
   assume_role_policy = data.aws_iam_policy_document.s3_assume_role.json
 }
 
-data "aws_iam_policy_document" "replication" {
+data "aws_iam_policy_document" "ct_to_central" {
   provider = aws.log
+
   statement {
     effect = "Allow"
 
@@ -396,16 +401,18 @@ data "aws_iam_policy_document" "replication" {
   }
 }
 
-resource "aws_iam_policy" "replication" {
+resource "aws_iam_policy" "ct_to_central" {
   provider = aws.log
-  name     = "ct-central-logs-replication"
-  policy   = data.aws_iam_policy_document.replication.json
+
+  name   = "ct-central-logs-replication"
+  policy = data.aws_iam_policy_document.ct_to_central.json
 }
 
-resource "aws_iam_role_policy_attachment" "replication" {
-  provider   = aws.log
-  role       = aws_iam_role.replication.name
-  policy_arn = aws_iam_policy.replication.arn
+resource "aws_iam_role_policy_attachment" "ct_to_central" {
+  provider = aws.log
+
+  role       = aws_iam_role.ct_to_central.name
+  policy_arn = aws_iam_policy.ct_to_central.arn
 }
 
 
@@ -416,14 +423,15 @@ resource "aws_iam_role_policy_attachment" "replication" {
 #   https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-config-for-kms-objects.html
 data "aws_iam_policy_document" "central_logs_bucket" {
   provider = aws.log
+
   statement {
     sid    = "Permissions on objects"
     effect = "Allow"
     principals {
       type = "AWS"
       identifiers = [
-        "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:role/${var.replication_role_name}",
-        aws_iam_role.replication.arn,
+        aws_iam_role.central_logs.arn,  # hubandspoke bucket to central bucket
+        aws_iam_role.ct_to_central.arn, # control tower bucket to central bucket
       ]
     }
     actions = [
@@ -440,8 +448,8 @@ data "aws_iam_policy_document" "central_logs_bucket" {
     principals {
       type = "AWS"
       identifiers = [
-        "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:role/${var.replication_role_name}",
-        resource.aws_iam_role.replication.arn,
+        aws_iam_role.central_logs.arn,  # hubandspoke bucket to central bucket
+        aws_iam_role.ct_to_central.arn, # control tower bucket to central bucket
       ]
     }
     actions = [
