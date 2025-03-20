@@ -747,7 +747,7 @@ module "s3_org_config_logs" {
   }
 }
 
-data "aws_iam_policy_document" "ct_log_delivery" {
+data "aws_iam_policy_document" "config_log_delivery" {
   provider = aws.hubandspoke
 
   statement {
