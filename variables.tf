@@ -49,3 +49,9 @@ variable "replication_role_name" {
   EOT
   default     = "hubandspoke-central-logs-replication"
 }
+
+variable "key_admin_arns" {
+  type        = list(string)
+  description = "List of ARNs for additional key administrators who can manage keys in the log archive account."
+  default     = []
+}
