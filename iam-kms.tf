@@ -127,7 +127,7 @@ resource "aws_kms_key_policy" "control_tower" {
         Effect = "Allow"
         Principal = {
           AWS = flatten([
-            [data.aws_caller_identity.management.arn],
+            data.aws_caller_identity.management.arn,
             var.key_admin_arns,
           ])
         }
@@ -244,11 +244,11 @@ resource "aws_kms_key_policy" "central_log_bucket" {
         Sid    = "Enable IAM User Permissions"
         Effect = "Allow"
         Principal = {
-          AWS = flatten(
-            [data.aws_caller_identity.log.arn],            # OrganizationAccountAccessRole
+          AWS = flatten([
+            data.aws_caller_identity.log.arn,              # OrganizationAccountAccessRole
             tolist(data.aws_iam_roles.log_sso_admin.arns), # AWSReservedSSO_AWSAdministratorAccess_*
-            ["arn:${data.aws_partition.log.partition}:iam::${data.aws_caller_identity.log.account_id}:root"]
-          )
+            "arn:${data.aws_partition.log.partition}:iam::${data.aws_caller_identity.log.account_id}:root"
+          ])
         }
         Action = [
           "kms:Encrypt",
@@ -263,11 +263,11 @@ resource "aws_kms_key_policy" "central_log_bucket" {
         Sid    = "Allow access for Key Administrators"
         Effect = "Allow"
         Principal = {
-          AWS = flatten(
-            [data.aws_caller_identity.log.arn],            # OrganizationAccountAccessRole
+          AWS = flatten([
+            data.aws_caller_identity.log.arn,              # OrganizationAccountAccessRole
             tolist(data.aws_iam_roles.log_sso_admin.arns), # AWSReservedSSO_AWSAdministratorAccess_*
             var.key_admin_arns,
-          )
+          ])
         }
         Action = [
           "kms:Create*",
