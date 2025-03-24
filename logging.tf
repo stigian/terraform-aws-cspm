@@ -831,7 +831,7 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
     for_each = var.account_id_map
 
     content {
-      id       = "org-config-history-west-${rule.value}"
+      id       = "org-config-west-${rule.value}"
       priority = index(keys(var.account_id_map), rule.key) * 6
       status   = "Enabled"
 
@@ -857,7 +857,7 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
       }
 
       filter {
-        prefix = "${var.aws_organization_id}/AWSLogs/${rule.value}/Config/us-gov-west-1/ConfigHistory/"
+        prefix = "${var.aws_organization_id}/AWSLogs/${rule.value}/Config/us-gov-west-1/"
       }
 
       delete_marker_replication {
@@ -870,46 +870,7 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
     for_each = var.account_id_map
 
     content {
-      id       = "org-config-snapshot-west-${rule.value}"
-      priority = index(keys(var.account_id_map), rule.key) * 6 + 1
-      status   = "Enabled"
-
-      destination {
-        bucket        = module.s3_org_config_logs.s3_bucket_arn
-        storage_class = "STANDARD"
-        encryption_configuration {
-          replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
-        }
-        access_control_translation {
-          owner = "Destination"
-        }
-        account = data.aws_caller_identity.hubandspoke.account_id
-      }
-
-      source_selection_criteria {
-        replica_modifications {
-          status = "Enabled"
-        }
-        sse_kms_encrypted_objects {
-          status = "Enabled"
-        }
-      }
-
-      filter {
-        prefix = "${var.aws_organization_id}/AWSLogs/${rule.value}/Config/us-gov-west-1/ConfigSnapshot/"
-      }
-
-      delete_marker_replication {
-        status = "Enabled"
-      }
-    }
-  }
-
-  dynamic "rule" {
-    for_each = var.account_id_map
-
-    content {
-      id       = "org-config-history-east-${rule.value}"
+      id       = "org-config-east-${rule.value}"
       priority = index(keys(var.account_id_map), rule.key) * 6 + 2
       status   = "Enabled"
 
@@ -935,46 +896,7 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
       }
 
       filter {
-        prefix = "${var.aws_organization_id}/AWSLogs/${rule.value}/Config/us-gov-east-1/ConfigHistory/"
-      }
-
-      delete_marker_replication {
-        status = "Enabled"
-      }
-    }
-  }
-
-  dynamic "rule" {
-    for_each = var.account_id_map
-
-    content {
-      id       = "org-config-snapshot-east-${rule.value}"
-      priority = index(keys(var.account_id_map), rule.key) * 6 + 3
-      status   = "Enabled"
-
-      destination {
-        bucket        = module.s3_org_config_logs.s3_bucket_arn
-        storage_class = "STANDARD"
-        encryption_configuration {
-          replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
-        }
-        access_control_translation {
-          owner = "Destination"
-        }
-        account = data.aws_caller_identity.hubandspoke.account_id
-      }
-
-      source_selection_criteria {
-        replica_modifications {
-          status = "Enabled"
-        }
-        sse_kms_encrypted_objects {
-          status = "Enabled"
-        }
-      }
-
-      filter {
-        prefix = "${var.aws_organization_id}/AWSLogs/${rule.value}/Config/us-gov-east-1/ConfigSnapshot/"
+        prefix = "${var.aws_organization_id}/AWSLogs/${rule.value}/Config/us-gov-east-1/"
       }
 
       delete_marker_replication {
