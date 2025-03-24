@@ -851,7 +851,7 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
     }
 
     filter {
-      prefix = "${var.aws_organization_id}/AWSLogs/*/Config/"
+      prefix = "${var.aws_organization_id}/AWSLogs/*/Config/*"
     }
 
     delete_marker_replication {
@@ -886,7 +886,7 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
     }
 
     filter {
-      prefix = "${var.aws_organization_id}/AWSLogs/${var.aws_organization_id}/*/CloudTrail/"
+      prefix = "${var.aws_organization_id}/AWSLogs/${var.aws_organization_id}/*/CloudTrail/*"
     }
 
     delete_marker_replication {
