@@ -478,7 +478,7 @@ resource "aws_iam_role" "hubandspoke_to_central" {
 
   name               = "hubandspoke-log-replication"
   description        = "Role for replicating logs from hubandspoke to the log archive account"
-  assume_role_policy = data.aws_iam_policy_document.central_logs_assume_role.json
+  assume_role_policy = data.aws_iam_policy_document.s3_assume_role.json
 }
 
 data "aws_iam_policy_document" "hubandspoke_to_central" {
@@ -584,7 +584,7 @@ resource "aws_iam_role" "org_logs_to_hubandspoke" {
 
   name               = "org-log-replication"
   description        = "Role for replicating org logs from log archive to hubandspoke account for ingest to SIEM."
-  assume_role_policy = data.aws_iam_policy_document.central_logs_assume_role.json
+  assume_role_policy = data.aws_iam_policy_document.s3_assume_role.json
 }
 
 data "aws_iam_policy_document" "org_logs_to_hubandspoke" {
