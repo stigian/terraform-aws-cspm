@@ -717,7 +717,7 @@ resource "aws_s3_bucket_replication_configuration" "org_cloudtrail_logs" {
     status = "Enabled"
 
     destination {
-      bucket        = module.s3_org_cloudtrail_logs.s3_bucket_id
+      bucket        = module.s3_org_cloudtrail_logs.s3_bucket_arn
       storage_class = "STANDARD"
     }
 
@@ -826,7 +826,7 @@ resource "aws_s3_bucket_replication_configuration" "org_config_logs" {
     status = "Enabled"
 
     destination {
-      bucket        = module.s3_org_config_logs.s3_bucket_id
+      bucket        = module.s3_org_config_logs.s3_bucket_arn
       storage_class = "STANDARD"
     }
 
