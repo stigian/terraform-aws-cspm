@@ -713,7 +713,7 @@ resource "aws_s3_bucket_replication_configuration" "org_cloudtrail_logs" {
   bucket = data.aws_s3_bucket.ct_logs.id
 
   rule {
-    id     = "everything"
+    id     = "org-cloudtrail"
     status = "Enabled"
 
     destination {
@@ -825,7 +825,7 @@ resource "aws_s3_bucket_replication_configuration" "org_config_logs" {
   bucket = data.aws_s3_bucket.ct_logs.id
 
   rule {
-    id     = "everything"
+    id     = "org-config"
     status = "Enabled"
 
     destination {
