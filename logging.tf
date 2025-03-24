@@ -709,7 +709,7 @@ data "aws_iam_policy_document" "cloudtrail_log_delivery" {
 resource "aws_s3_bucket_replication_configuration" "org_cloudtrail_logs" {
   provider = aws.log
 
-  role   = aws_iam_role.org_logs_to_hubandspoke
+  role   = aws_iam_role.org_logs_to_hubandspoke.arn
   bucket = data.aws_s3_bucket.ct_logs.id
 
   rule {
@@ -818,7 +818,7 @@ data "aws_iam_policy_document" "config_log_delivery" {
 resource "aws_s3_bucket_replication_configuration" "org_config_logs" {
   provider = aws.log
 
-  role   = aws_iam_role.org_logs_to_hubandspoke
+  role   = aws_iam_role.org_logs_to_hubandspoke.arn
   bucket = data.aws_s3_bucket.ct_logs.id
 
   rule {
