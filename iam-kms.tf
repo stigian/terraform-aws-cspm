@@ -226,8 +226,8 @@ resource "aws_kms_key_policy" "central_log_bucket" {
         Effect = "Allow"
         Principal = {
           AWS = [
-            aws_iam_role.central_logs.arn,  # hubandspoke bucket to central bucket
-            aws_iam_role.ct_to_central.arn, # control tower bucket to central bucket
+            aws_iam_role.hubandspoke_to_central.arn, # hubandspoke bucket to central bucket
+            aws_iam_role.ct_logs_replication.arn,    # control tower bucket to central bucket
             # "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:root"
           ]
         }
@@ -327,14 +327,14 @@ data "aws_iam_policy_document" "s3_assume_role" {
   }
 }
 
-resource "aws_iam_role" "ct_to_central" {
+resource "aws_iam_role" "ct_logs_replication" {
   provider = aws.log
 
   name               = "ct-central-logs-replication"
   assume_role_policy = data.aws_iam_policy_document.s3_assume_role.json
 }
 
-data "aws_iam_policy_document" "ct_to_central" {
+data "aws_iam_policy_document" "ct_logs_replication" {
   provider = aws.log
 
   statement {
@@ -370,7 +370,8 @@ data "aws_iam_policy_document" "ct_to_central" {
     ]
 
     resources = [
-      "arn:${data.aws_partition.log.partition}:s3:::${module.central_bucket.s3_bucket_id}/*"
+      "${module.central_bucket.s3_bucket_arn}/*",
+      "${data.aws_s3_bucket.ct_logs.arn}/*"
     ]
   }
 
@@ -401,18 +402,18 @@ data "aws_iam_policy_document" "ct_to_central" {
   }
 }
 
-resource "aws_iam_policy" "ct_to_central" {
+resource "aws_iam_policy" "ct_logs_replication" {
   provider = aws.log
 
   name   = "ct-central-logs-replication"
-  policy = data.aws_iam_policy_document.ct_to_central.json
+  policy = data.aws_iam_policy_document.ct_logs_replication.json
 }
 
-resource "aws_iam_role_policy_attachment" "ct_to_central" {
+resource "aws_iam_role_policy_attachment" "ct_logs_replication" {
   provider = aws.log
 
-  role       = aws_iam_role.ct_to_central.name
-  policy_arn = aws_iam_policy.ct_to_central.arn
+  role       = aws_iam_role.ct_logs_replication.name
+  policy_arn = aws_iam_policy.ct_logs_replication.arn
 }
 
 
@@ -430,8 +431,8 @@ data "aws_iam_policy_document" "central_logs_bucket" {
     principals {
       type = "AWS"
       identifiers = [
-        aws_iam_role.central_logs.arn,  # hubandspoke bucket to central bucket
-        aws_iam_role.ct_to_central.arn, # control tower bucket to central bucket
+        aws_iam_role.hubandspoke_to_central.arn, # hubandspoke bucket to central bucket
+        aws_iam_role.ct_logs_replication.arn,    # control tower bucket to central bucket
       ]
     }
     actions = [
@@ -448,8 +449,8 @@ data "aws_iam_policy_document" "central_logs_bucket" {
     principals {
       type = "AWS"
       identifiers = [
-        aws_iam_role.central_logs.arn,  # hubandspoke bucket to central bucket
-        aws_iam_role.ct_to_central.arn, # control tower bucket to central bucket
+        aws_iam_role.hubandspoke_to_central.arn, # hubandspoke bucket to central bucket
+        aws_iam_role.ct_logs_replication.arn,    # control tower bucket to central bucket
       ]
     }
     actions = [
@@ -459,4 +460,216 @@ data "aws_iam_policy_document" "central_logs_bucket" {
     ]
     resources = [module.central_bucket.s3_bucket_arn]
   }
+}
+
+
+###############################################################################
+#
+# Roles for log replication to/from buckets
+#
+# REFS:
+#   - https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-config-for-kms-objects.html#replication-walkthrough-4
+#   - https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-walkthrough-2.html
+#   - https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-troubleshoot.html
+###############################################################################
+
+resource "aws_iam_role" "hubandspoke_to_central" {
+  provider = aws.hubandspoke
+
+  name               = "hubandspoke-log-replication"
+  description        = "Role for replicating logs from hubandspoke to the log archive account"
+  assume_role_policy = data.aws_iam_policy_document.central_logs_assume_role.json
+}
+
+data "aws_iam_policy_document" "hubandspoke_to_central" {
+  provider = aws.hubandspoke
+
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "s3:GetReplicationConfiguration",
+      "s3:ListBucket",
+    ]
+
+    resources = [
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["s3_access_logs"]}",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["lb_logs"]}",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["vpc_flow_logs"]}",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["waf_logs"]}",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["anfw_logs"]}",
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "s3:GetObjectVersionForReplication",
+      "s3:GetObjectVersionAcl",
+      "s3:GetObjectVersionTagging",
+    ]
+
+    resources = [
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["s3_access_logs"]}/*",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["lb_logs"]}/*",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["vpc_flow_logs"]}/*",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["waf_logs"]}/*",
+      "arn:${data.aws_partition.hubandspoke.partition}:s3:::${local.bucket_names["anfw_logs"]}/*",
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "s3:ReplicateObject",
+      "s3:ReplicateDelete",
+      "s3:ReplicateTags",
+      "s3:ObjectOwnerOverrideToBucketOwner",
+    ]
+
+    resources = [
+      "arn:aws-us-gov:s3:::${local.bucket_names["central_logs"]}/*",
+      # "arn:${data.aws_partition.log.partition}:s3:::${local.bucket_names["central_logs"]}/*",
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "kms:Decrypt",
+      "kms:GenerateDataKey"
+    ]
+
+    resources = [
+      aws_kms_key.hubandspoke_s3.arn
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "kms:Encrypt",
+      "kms:GenerateDataKey"
+    ]
+
+    resources = [
+      aws_kms_key.hubandspoke_s3.arn,
+      aws_kms_key.central_log_bucket.arn,
+    ]
+  }
+}
+
+resource "aws_iam_policy" "hubandspoke_to_central" {
+  provider = aws.hubandspoke
+
+  name   = "${local.bucket_names["central_logs"]}-policy"
+  policy = data.aws_iam_policy_document.hubandspoke_to_central.json
+}
+
+resource "aws_iam_role_policy_attachment" "hubandspoke_to_central" {
+  provider = aws.hubandspoke
+
+  role       = aws_iam_role.hubandspoke_to_central.name
+  policy_arn = aws_iam_policy.hubandspoke_to_central.arn
+}
+
+
+# Replicate org cloudtrail and org config from log account to hubandspoke account
+resource "aws_iam_role" "org_logs_to_hubandspoke" {
+  provider = aws.log
+
+  name               = "org-log-replication"
+  description        = "Role for replicating org logs from log archive to hubandspoke account for ingest to SIEM."
+  assume_role_policy = data.aws_iam_policy_document.central_logs_assume_role.json
+}
+
+data "aws_iam_policy_document" "org_logs_to_hubandspoke" {
+  provider = aws.log
+
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "s3:GetReplicationConfiguration",
+      "s3:ListBucket",
+    ]
+
+    resources = [
+      data.aws_s3_bucket.ct_logs.arn,
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "s3:GetObjectVersionForReplication",
+      "s3:GetObjectVersionAcl",
+      "s3:GetObjectVersionTagging",
+    ]
+
+    resources = [
+      "${data.aws_s3_bucket.ct_logs.arn}/*",
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "s3:ReplicateObject",
+      "s3:ReplicateDelete",
+      "s3:ReplicateTags",
+      "s3:ObjectOwnerOverrideToBucketOwner",
+    ]
+
+    resources = [
+      "${module.s3_org_config_logs.s3_bucket_arn}/*",
+      "${module.s3_org_cloudtrail_logs.s3_bucket_arn}/*",
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "kms:Decrypt",
+      "kms:GenerateDataKey"
+    ]
+
+    resources = [
+      aws_kms_key.control_tower.arn
+    ]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "kms:Encrypt",
+      "kms:GenerateDataKey"
+    ]
+
+    resources = [
+      aws_kms_key.hubandspoke_s3.arn,
+    ]
+  }
+}
+
+resource "aws_iam_policy" "org_logs_to_hubandspoke" {
+  provider = aws.log
+
+  name   = "${local.bucket_names["central_logs"]}-policy"
+  policy = data.aws_iam_policy_document.org_logs_to_hubandspoke.json
+}
+
+resource "aws_iam_role_policy_attachment" "org_logs_to_hubandspoke" {
+  provider = aws.log
+
+  role       = aws_iam_role.org_logs_to_hubandspoke.name
+  policy_arn = aws_iam_policy.org_logs_to_hubandspoke.arn
 }
