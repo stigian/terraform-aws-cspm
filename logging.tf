@@ -719,6 +719,9 @@ resource "aws_s3_bucket_replication_configuration" "org_cloudtrail_logs" {
     destination {
       bucket        = module.s3_org_cloudtrail_logs.s3_bucket_arn
       storage_class = "STANDARD"
+      encryption_configuration {
+        replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
+      }
     }
 
     source_selection_criteria {
@@ -828,6 +831,9 @@ resource "aws_s3_bucket_replication_configuration" "org_config_logs" {
     destination {
       bucket        = module.s3_org_config_logs.s3_bucket_arn
       storage_class = "STANDARD"
+      encryption_configuration {
+        replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
+      }
     }
 
     source_selection_criteria {
