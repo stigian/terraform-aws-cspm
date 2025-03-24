@@ -935,7 +935,7 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
       }
 
       filter {
-        prefix = "${var.aws_organization_id}/AWSLogs/${rule.value}/CloudTrail/us-gov-west-1/"
+        prefix = "${var.aws_organization_id}/AWSLogs/${var.aws_organization_id}/${rule.value}/CloudTrail/us-gov-west-1/"
       }
 
       delete_marker_replication {
@@ -974,7 +974,7 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
       }
 
       filter {
-        prefix = "${var.aws_organization_id}/AWSLogs/${rule.value}/CloudTrail/us-gov-east-1/"
+        prefix = "${var.aws_organization_id}/AWSLogs/${var.aws_organization_id}/${rule.value}/CloudTrail/us-gov-east-1/"
       }
 
       delete_marker_replication {
