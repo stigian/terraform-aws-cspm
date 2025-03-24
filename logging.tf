@@ -818,79 +818,246 @@ data "aws_iam_policy_document" "config_log_delivery" {
   }
 }
 
+# S3 bucket replication prefix filter doesn't support wildcards, so we end up
+# creating a rule for each account in the organization. This is a bit verbose,
+# but it's the only way to ensure that we're replicating all the logs.
 resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
   provider = aws.log
 
   role   = aws_iam_role.org_logs_to_hubandspoke.arn
   bucket = data.aws_s3_bucket.ct_logs.id
 
-  rule {
-    id       = "org-config"
-    priority = 0
-    status   = "Enabled"
+  dynamic "rule" {
+    for_each = var.account_id_map
 
-    destination {
-      bucket        = module.s3_org_config_logs.s3_bucket_arn
-      storage_class = "STANDARD"
-      encryption_configuration {
-        replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
-      }
-      access_control_translation {
-        owner = "Destination"
-      }
-      account = data.aws_caller_identity.hubandspoke.account_id
-    }
+    content {
+      id       = "org-config-history-west-${rule.value}"
+      priority = index(keys(var.account_id_map), rule.key) * 6
+      status   = "Enabled"
 
-    source_selection_criteria {
-      replica_modifications {
+      destination {
+        bucket        = module.s3_org_config_logs.s3_bucket_arn
+        storage_class = "STANDARD"
+        encryption_configuration {
+          replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
+        }
+        access_control_translation {
+          owner = "Destination"
+        }
+        account = data.aws_caller_identity.hubandspoke.account_id
+      }
+
+      source_selection_criteria {
+        replica_modifications {
+          status = "Enabled"
+        }
+        sse_kms_encrypted_objects {
+          status = "Enabled"
+        }
+      }
+
+      filter {
+        prefix = "${var.aws_organization_id}/AWSLogs/${rule.value}/Config/us-gov-west-1/ConfigHistory/"
+      }
+
+      delete_marker_replication {
         status = "Enabled"
       }
-      sse_kms_encrypted_objects {
-        status = "Enabled"
-      }
-    }
-
-    filter {
-      prefix = "${var.aws_organization_id}/AWSLogs/*/Config/*"
-    }
-
-    delete_marker_replication {
-      status = "Enabled"
     }
   }
 
-  rule {
-    id       = "org-cloudtrail"
-    priority = 1
-    status   = "Enabled"
+  dynamic "rule" {
+    for_each = var.account_id_map
 
-    destination {
-      bucket        = module.s3_org_cloudtrail_logs.s3_bucket_arn
-      storage_class = "STANDARD"
-      encryption_configuration {
-        replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
-      }
-      access_control_translation {
-        owner = "Destination"
-      }
-      account = data.aws_caller_identity.hubandspoke.account_id
-    }
+    content {
+      id       = "org-config-snapshot-west-${rule.value}"
+      priority = index(keys(var.account_id_map), rule.key) * 6 + 1
+      status   = "Enabled"
 
-    source_selection_criteria {
-      replica_modifications {
+      destination {
+        bucket        = module.s3_org_config_logs.s3_bucket_arn
+        storage_class = "STANDARD"
+        encryption_configuration {
+          replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
+        }
+        access_control_translation {
+          owner = "Destination"
+        }
+        account = data.aws_caller_identity.hubandspoke.account_id
+      }
+
+      source_selection_criteria {
+        replica_modifications {
+          status = "Enabled"
+        }
+        sse_kms_encrypted_objects {
+          status = "Enabled"
+        }
+      }
+
+      filter {
+        prefix = "${var.aws_organization_id}/AWSLogs/${rule.value}/Config/us-gov-west-1/ConfigSnapshot/"
+      }
+
+      delete_marker_replication {
         status = "Enabled"
       }
-      sse_kms_encrypted_objects {
+    }
+  }
+
+  dynamic "rule" {
+    for_each = var.account_id_map
+
+    content {
+      id       = "org-config-history-east-${rule.value}"
+      priority = index(keys(var.account_id_map), rule.key) * 6 + 2
+      status   = "Enabled"
+
+      destination {
+        bucket        = module.s3_org_config_logs.s3_bucket_arn
+        storage_class = "STANDARD"
+        encryption_configuration {
+          replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
+        }
+        access_control_translation {
+          owner = "Destination"
+        }
+        account = data.aws_caller_identity.hubandspoke.account_id
+      }
+
+      source_selection_criteria {
+        replica_modifications {
+          status = "Enabled"
+        }
+        sse_kms_encrypted_objects {
+          status = "Enabled"
+        }
+      }
+
+      filter {
+        prefix = "${var.aws_organization_id}/AWSLogs/${rule.value}/Config/us-gov-east-1/ConfigHistory/"
+      }
+
+      delete_marker_replication {
         status = "Enabled"
       }
     }
+  }
 
-    filter {
-      prefix = "${var.aws_organization_id}/AWSLogs/${var.aws_organization_id}/*/CloudTrail/*"
+  dynamic "rule" {
+    for_each = var.account_id_map
+
+    content {
+      id       = "org-config-snapshot-east-${rule.value}"
+      priority = index(keys(var.account_id_map), rule.key) * 6 + 3
+      status   = "Enabled"
+
+      destination {
+        bucket        = module.s3_org_config_logs.s3_bucket_arn
+        storage_class = "STANDARD"
+        encryption_configuration {
+          replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
+        }
+        access_control_translation {
+          owner = "Destination"
+        }
+        account = data.aws_caller_identity.hubandspoke.account_id
+      }
+
+      source_selection_criteria {
+        replica_modifications {
+          status = "Enabled"
+        }
+        sse_kms_encrypted_objects {
+          status = "Enabled"
+        }
+      }
+
+      filter {
+        prefix = "${var.aws_organization_id}/AWSLogs/${rule.value}/Config/us-gov-east-1/ConfigSnapshot/"
+      }
+
+      delete_marker_replication {
+        status = "Enabled"
+      }
     }
+  }
 
-    delete_marker_replication {
-      status = "Enabled"
+  dynamic "rule" {
+    for_each = var.account_id_map
+
+    content {
+      id       = "org-cloudtrail-west-${rule.value}"
+      priority = index(keys(var.account_id_map), rule.key) * 6 + 4
+      status   = "Enabled"
+
+      destination {
+        bucket        = module.s3_org_cloudtrail_logs.s3_bucket_arn
+        storage_class = "STANDARD"
+        encryption_configuration {
+          replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
+        }
+        access_control_translation {
+          owner = "Destination"
+        }
+        account = data.aws_caller_identity.hubandspoke.account_id
+      }
+
+      source_selection_criteria {
+        replica_modifications {
+          status = "Enabled"
+        }
+        sse_kms_encrypted_objects {
+          status = "Enabled"
+        }
+      }
+
+      filter {
+        prefix = "${var.aws_organization_id}/AWSLogs/${rule.value}/CloudTrail/us-gov-west-1/"
+      }
+
+      delete_marker_replication {
+        status = "Enabled"
+      }
+    }
+  }
+
+  dynamic "rule" {
+    for_each = var.account_id_map
+
+    content {
+      id       = "org-cloudtrail-east-${rule.value}"
+      priority = index(keys(var.account_id_map), rule.key) * 6 + 5
+      status   = "Enabled"
+
+      destination {
+        bucket        = module.s3_org_cloudtrail_logs.s3_bucket_arn
+        storage_class = "STANDARD"
+        encryption_configuration {
+          replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
+        }
+        access_control_translation {
+          owner = "Destination"
+        }
+        account = data.aws_caller_identity.hubandspoke.account_id
+      }
+
+      source_selection_criteria {
+        replica_modifications {
+          status = "Enabled"
+        }
+        sse_kms_encrypted_objects {
+          status = "Enabled"
+        }
+      }
+
+      filter {
+        prefix = "${var.aws_organization_id}/AWSLogs/${rule.value}/CloudTrail/us-gov-east-1/"
+      }
+
+      delete_marker_replication {
+        status = "Enabled"
+      }
     }
   }
 }
