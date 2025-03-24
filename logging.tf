@@ -825,8 +825,9 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
   bucket = data.aws_s3_bucket.ct_logs.id
 
   rule {
-    id     = "org-config"
-    status = "Enabled"
+    id       = "org-config"
+    priority = 0
+    status   = "Enabled"
 
     destination {
       bucket        = module.s3_org_config_logs.s3_bucket_arn
@@ -855,8 +856,9 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
   }
 
   rule {
-    id     = "org-cloudtrail"
-    status = "Enabled"
+    id       = "org-cloudtrail"
+    priority = 1
+    status   = "Enabled"
 
     destination {
       bucket        = module.s3_org_cloudtrail_logs.s3_bucket_arn
