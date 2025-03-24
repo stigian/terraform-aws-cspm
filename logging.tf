@@ -675,15 +675,22 @@ data "aws_iam_policy_document" "cloudtrail_log_delivery" {
   provider = aws.hubandspoke
 
   statement {
-    sid    = "AWSLogDeliveryWrite"
+    sid    = "Permissions on objects"
     effect = "Allow"
 
     principals {
-      type        = "Service"
-      identifiers = ["delivery.logs.amazonaws.com"]
+      type = "AWS"
+      identifiers = [
+        aws_iam_role.org_logs_to_hubandspoke.arn
+      ]
     }
 
-    actions = ["s3:PutObject"]
+    actions = [
+      "s3:ReplicateTags",
+      "s3:ReplicateDelete",
+      "s3:ReplicateObject",
+      "s3:ObjectOwnerOverrideToBucketOwner",
+    ]
 
     resources = [
       "${module.s3_org_cloudtrail_logs.s3_bucket_arn}/*",
@@ -691,14 +698,21 @@ data "aws_iam_policy_document" "cloudtrail_log_delivery" {
   }
 
   statement {
-    sid = "AWSLogDeliveryAclCheck"
+    sid    = "Permissions on bucket"
+    effect = "Allow"
 
     principals {
-      type        = "Service"
-      identifiers = ["delivery.logs.amazonaws.com"]
+      type = "AWS"
+      identifiers = [
+        aws_iam_role.org_logs_to_hubandspoke.arn,
+      ]
     }
 
-    actions = ["s3:GetBucketAcl"]
+    actions = [
+      "s3:List*",
+      "s3:GetBucketVersioning",
+      "s3:PutBucketVersioning",
+    ]
 
     resources = [
       module.s3_org_cloudtrail_logs.s3_bucket_arn,
@@ -787,15 +801,22 @@ data "aws_iam_policy_document" "config_log_delivery" {
   provider = aws.hubandspoke
 
   statement {
-    sid    = "AWSLogDeliveryWrite"
+    sid    = "Permissions on objects"
     effect = "Allow"
 
     principals {
-      type        = "Service"
-      identifiers = ["delivery.logs.amazonaws.com"]
+      type = "AWS"
+      identifiers = [
+        aws_iam_role.org_logs_to_hubandspoke.arn
+      ]
     }
 
-    actions = ["s3:PutObject"]
+    actions = [
+      "s3:ReplicateTags",
+      "s3:ReplicateDelete",
+      "s3:ReplicateObject",
+      "s3:ObjectOwnerOverrideToBucketOwner",
+    ]
 
     resources = [
       "${module.s3_org_config_logs.s3_bucket_arn}/*",
@@ -803,14 +824,21 @@ data "aws_iam_policy_document" "config_log_delivery" {
   }
 
   statement {
-    sid = "AWSLogDeliveryAclCheck"
+    sid    = "Permissions on bucket"
+    effect = "Allow"
 
     principals {
-      type        = "Service"
-      identifiers = ["delivery.logs.amazonaws.com"]
+      type = "AWS"
+      identifiers = [
+        aws_iam_role.org_logs_to_hubandspoke.arn,
+      ]
     }
 
-    actions = ["s3:GetBucketAcl"]
+    actions = [
+      "s3:List*",
+      "s3:GetBucketVersioning",
+      "s3:PutBucketVersioning",
+    ]
 
     resources = [
       module.s3_org_config_logs.s3_bucket_arn,
