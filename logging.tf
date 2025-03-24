@@ -835,6 +835,10 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
       encryption_configuration {
         replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
       }
+      access_control_translation {
+        owner = "Destination"
+      }
+      account = data.aws_caller_identity.hubandspoke.account_id
     }
 
     source_selection_criteria {
@@ -866,6 +870,10 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
       encryption_configuration {
         replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
       }
+      access_control_translation {
+        owner = "Destination"
+      }
+      account = data.aws_caller_identity.hubandspoke.account_id
     }
 
     source_selection_criteria {
