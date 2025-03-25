@@ -621,7 +621,7 @@ resource "aws_kms_key_policy" "hubandspoke_s3" {
         Effect = "Allow"
         Principal = {
           AWS = [
-            aws_iam_role.org_logs_to_hubandspoke.arn
+            aws_iam_role.ct_logs_replication.arn
           ]
         }
         Action = [
@@ -694,7 +694,7 @@ data "aws_iam_policy_document" "cloudtrail_log_delivery" {
     principals {
       type = "AWS"
       identifiers = [
-        aws_iam_role.org_logs_to_hubandspoke.arn
+        aws_iam_role.ct_logs_replication.arn
       ]
     }
 
@@ -717,7 +717,7 @@ data "aws_iam_policy_document" "cloudtrail_log_delivery" {
     principals {
       type = "AWS"
       identifiers = [
-        aws_iam_role.org_logs_to_hubandspoke.arn,
+        aws_iam_role.ct_logs_replication.arn,
       ]
     }
 
@@ -736,7 +736,7 @@ data "aws_iam_policy_document" "cloudtrail_log_delivery" {
 # resource "aws_s3_bucket_replication_configuration" "org_cloudtrail_logs" {
 #   provider = aws.log
 
-#   role   = aws_iam_role.org_logs_to_hubandspoke.arn
+#   role   = aws_iam_role.ct_logs_replication.arn
 #   bucket = data.aws_s3_bucket.ct_logs.id
 
 #   rule {
@@ -820,7 +820,7 @@ data "aws_iam_policy_document" "config_log_delivery" {
     principals {
       type = "AWS"
       identifiers = [
-        aws_iam_role.org_logs_to_hubandspoke.arn
+        aws_iam_role.ct_logs_replication.arn
       ]
     }
 
@@ -843,7 +843,7 @@ data "aws_iam_policy_document" "config_log_delivery" {
     principals {
       type = "AWS"
       identifiers = [
-        aws_iam_role.org_logs_to_hubandspoke.arn,
+        aws_iam_role.ct_logs_replication.arn,
       ]
     }
 
@@ -862,27 +862,48 @@ data "aws_iam_policy_document" "config_log_delivery" {
 # S3 bucket replication prefix filter doesn't support wildcards, so we end up
 # creating a rule for each account in the organization. This is a bit verbose,
 # but it's the only way to ensure that we're replicating all the logs.
-locals {
-  account_priorities = {
-    "log"         = 0
-    "audit"       = 1
-    "management"  = 2
-    "hubandspoke" = 3
-  }
-}
-
-resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
+resource "aws_s3_bucket_replication_configuration" "ct_logs_replication" {
   provider = aws.log
 
-  role   = aws_iam_role.org_logs_to_hubandspoke.arn
+  role   = aws_iam_role.ct_logs_replication.arn
   bucket = data.aws_s3_bucket.ct_logs.id
 
+  # Rule to send everything to the central bucket
+  rule {
+    id     = "everything"
+    status = "Enabled"
+    filter {}
+    delete_marker_replication {
+      status = "Enabled"
+    }
+    source_selection_criteria {
+      replica_modifications {
+        status = "Enabled"
+      }
+      sse_kms_encrypted_objects {
+        status = "Enabled"
+      }
+    }
+    destination {
+      bucket        = module.central_bucket.s3_bucket_arn
+      storage_class = "STANDARD"
+      account       = data.aws_caller_identity.log.account_id
+      encryption_configuration {
+        replica_kms_key_id = aws_kms_key.central_log_bucket.arn
+      }
+      access_control_translation {
+        owner = "Destination"
+      }
+    }
+  }
+
+  # Dynamic rules for specific logs
   dynamic "rule" {
     for_each = var.account_id_map
 
     content {
       id       = "org-config-west-${rule.value}"
-      priority = local.account_priorities[rule.key] * 6
+      priority = index(keys(var.account_id_map), rule.key) * 6
       status   = "Enabled"
 
       destination {
@@ -924,7 +945,7 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
 
     content {
       id       = "org-config-east-${rule.value}"
-      priority = local.account_priorities[rule.key] * 6 + 2
+      priority = index(keys(var.account_id_map), rule.key) * 6 + 2
       status   = "Enabled"
 
       destination {
@@ -966,7 +987,7 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
 
     content {
       id       = "org-cloudtrail-west-${rule.value}"
-      priority = local.account_priorities[rule.key] * 6 + 4
+      priority = index(keys(var.account_id_map), rule.key) * 6 + 4
       status   = "Enabled"
 
       destination {
@@ -1008,7 +1029,7 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
 
     content {
       id       = "org-cloudtrail-east-${rule.value}"
-      priority = local.account_priorities[rule.key] * 6 + 5
+      priority = index(keys(var.account_id_map), rule.key) * 6 + 5
       status   = "Enabled"
 
       destination {
@@ -1117,45 +1138,5 @@ module "central_bucket" {
   versioning = {
     enabled    = true
     mfa_delete = false # must be false for lifecycle rules to work
-  }
-}
-
-
-# Aggregate CT logs to central bucket. If we need to distribute the org-level
-# Cloudtrail logs to each account we can add more replication rules see link below:
-# - https://repost.aws/questions/QU_Q-w35OWRhW75A69-4Kfhw/control-tower-log-sharing-with-individual-accounts
-resource "aws_s3_bucket_replication_configuration" "ct_logs_replication" {
-  provider = aws.log
-
-  role   = aws_iam_role.ct_logs_replication.arn
-  bucket = data.aws_s3_bucket.ct_logs.id
-
-  rule {
-    id     = "everything"
-    status = "Enabled"
-    filter {}
-    delete_marker_replication {
-      status = "Enabled"
-    }
-    source_selection_criteria {
-      replica_modifications {
-        status = "Enabled"
-      }
-      sse_kms_encrypted_objects {
-        status = "Enabled"
-      }
-    }
-
-    destination {
-      bucket        = module.central_bucket.s3_bucket_arn
-      storage_class = "STANDARD"
-      account       = data.aws_caller_identity.log.account_id
-      encryption_configuration {
-        replica_kms_key_id = aws_kms_key.central_log_bucket.arn
-      }
-      access_control_translation {
-        owner = "Destination"
-      }
-    }
   }
 }

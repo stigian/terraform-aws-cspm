@@ -186,7 +186,7 @@ resource "aws_kms_key_policy" "control_tower" {
         Effect = "Allow"
         Principal = {
           AWS = [
-            aws_iam_role.org_logs_to_hubandspoke.arn
+            aws_iam_role.ct_logs_replication.arn
           ]
         }
         Action = [
@@ -593,7 +593,7 @@ resource "aws_iam_role_policy_attachment" "hubandspoke_to_central" {
 
 
 # Replicate org cloudtrail and org config from log account to hubandspoke account
-resource "aws_iam_role" "org_logs_to_hubandspoke" {
+resource "aws_iam_role" "ct_logs_replication" {
   provider = aws.log
 
   name               = "org-log-replication"
@@ -601,7 +601,7 @@ resource "aws_iam_role" "org_logs_to_hubandspoke" {
   assume_role_policy = data.aws_iam_policy_document.s3_assume_role.json
 }
 
-data "aws_iam_policy_document" "org_logs_to_hubandspoke" {
+data "aws_iam_policy_document" "ct_logs_replication" {
   provider = aws.log
 
   statement {
@@ -674,16 +674,16 @@ data "aws_iam_policy_document" "org_logs_to_hubandspoke" {
   }
 }
 
-resource "aws_iam_policy" "org_logs_to_hubandspoke" {
+resource "aws_iam_policy" "ct_logs_replication" {
   provider = aws.log
 
   name   = "${local.bucket_names["central_logs"]}-policy"
-  policy = data.aws_iam_policy_document.org_logs_to_hubandspoke.json
+  policy = data.aws_iam_policy_document.ct_logs_replication.json
 }
 
-resource "aws_iam_role_policy_attachment" "org_logs_to_hubandspoke" {
+resource "aws_iam_role_policy_attachment" "ct_logs_replication" {
   provider = aws.log
 
-  role       = aws_iam_role.org_logs_to_hubandspoke.name
-  policy_arn = aws_iam_policy.org_logs_to_hubandspoke.arn
+  role       = aws_iam_role.ct_logs_replication.name
+  policy_arn = aws_iam_policy.ct_logs_replication.arn
 }
