@@ -593,15 +593,15 @@ resource "aws_iam_role_policy_attachment" "hubandspoke_to_central" {
 
 
 # Replicate org cloudtrail and org config from log account to hubandspoke account
-resource "aws_iam_role" "ct_logs_replication" {
+resource "aws_iam_role" "combined_logs_replication" {
   provider = aws.log
 
   name               = "org-log-replication"
-  description        = "Role for replicating org logs from log archive to hubandspoke account for ingest to SIEM."
+  description        = "Role for replicating CT logs to hubandspoke (for SIEM) and central logs bucket (for audit)."
   assume_role_policy = data.aws_iam_policy_document.s3_assume_role.json
 }
 
-data "aws_iam_policy_document" "ct_logs_replication" {
+data "aws_iam_policy_document" "combined_logs_replication" {
   provider = aws.log
 
   statement {
@@ -674,16 +674,16 @@ data "aws_iam_policy_document" "ct_logs_replication" {
   }
 }
 
-resource "aws_iam_policy" "ct_logs_replication" {
+resource "aws_iam_policy" "combined_logs_replication" {
   provider = aws.log
 
   name   = "${local.bucket_names["central_logs"]}-policy"
-  policy = data.aws_iam_policy_document.ct_logs_replication.json
+  policy = data.aws_iam_policy_document.combined_logs_replication.json
 }
 
-resource "aws_iam_role_policy_attachment" "ct_logs_replication" {
+resource "aws_iam_role_policy_attachment" "combined_logs_replication" {
   provider = aws.log
 
-  role       = aws_iam_role.ct_logs_replication.name
-  policy_arn = aws_iam_policy.ct_logs_replication.arn
+  role       = aws_iam_role.combined_logs_replication.name
+  policy_arn = aws_iam_policy.combined_logs_replication.arn
 }

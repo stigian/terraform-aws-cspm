@@ -862,10 +862,10 @@ data "aws_iam_policy_document" "config_log_delivery" {
 # S3 bucket replication prefix filter doesn't support wildcards, so we end up
 # creating a rule for each account in the organization. This is a bit verbose,
 # but it's the only way to ensure that we're replicating all the logs.
-resource "aws_s3_bucket_replication_configuration" "ct_logs_replication" {
+resource "aws_s3_bucket_replication_configuration" "combined_logs_replication" {
   provider = aws.log
 
-  role   = aws_iam_role.ct_logs_replication.arn
+  role   = aws_iam_role.combined_logs_replication.arn
   bucket = data.aws_s3_bucket.ct_logs.id
 
   # Rule to send everything to the central bucket
