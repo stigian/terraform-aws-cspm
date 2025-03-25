@@ -186,7 +186,6 @@ resource "aws_kms_key_policy" "control_tower" {
         Effect = "Allow"
         Principal = {
           AWS = [
-            aws_iam_role.ct_logs_to_central_replication.arn,
             aws_iam_role.combined_logs_replication.arn,
           ]
         }
@@ -241,8 +240,8 @@ resource "aws_kms_key_policy" "central_log_bucket" {
         Effect = "Allow"
         Principal = {
           AWS = [
-            aws_iam_role.hubandspoke_to_central.arn,         # hubandspoke bucket to central bucket
-            aws_iam_role.ct_logs_to_central_replication.arn, # control tower bucket to central bucket
+            aws_iam_role.hubandspoke_to_central.arn,    # hubandspoke bucket to central bucket
+            aws_iam_role.combined_logs_replication.arn, # control tower bucket to central bucket
             # "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:root"
           ]
         }
@@ -342,94 +341,94 @@ data "aws_iam_policy_document" "s3_assume_role" {
   }
 }
 
-resource "aws_iam_role" "ct_logs_to_central_replication" {
-  provider = aws.log
+# resource "aws_iam_role" "ct_logs_to_central_replication" {
+#   provider = aws.log
 
-  name               = "ct-central-logs-replication"
-  assume_role_policy = data.aws_iam_policy_document.s3_assume_role.json
-}
+#   name               = "ct-central-logs-replication"
+#   assume_role_policy = data.aws_iam_policy_document.s3_assume_role.json
+# }
 
-data "aws_iam_policy_document" "ct_logs_to_central_replication" {
-  provider = aws.log
+# data "aws_iam_policy_document" "ct_logs_to_central_replication" {
+#   provider = aws.log
 
-  statement {
-    effect = "Allow"
+#   statement {
+#     effect = "Allow"
 
-    actions = [
-      "s3:GetReplicationConfiguration",
-      "s3:ListBucket",
-    ]
+#     actions = [
+#       "s3:GetReplicationConfiguration",
+#       "s3:ListBucket",
+#     ]
 
-    resources = [data.aws_s3_bucket.ct_logs.arn]
-  }
+#     resources = [data.aws_s3_bucket.ct_logs.arn]
+#   }
 
-  statement {
-    effect = "Allow"
+#   statement {
+#     effect = "Allow"
 
-    actions = [
-      "s3:GetObjectVersionForReplication",
-      "s3:GetObjectVersionAcl",
-      "s3:GetObjectVersionTagging",
-    ]
+#     actions = [
+#       "s3:GetObjectVersionForReplication",
+#       "s3:GetObjectVersionAcl",
+#       "s3:GetObjectVersionTagging",
+#     ]
 
-    resources = ["${data.aws_s3_bucket.ct_logs.arn}/*"]
-  }
+#     resources = ["${data.aws_s3_bucket.ct_logs.arn}/*"]
+#   }
 
-  statement {
-    effect = "Allow"
+#   statement {
+#     effect = "Allow"
 
-    actions = [
-      "s3:ReplicateObject",
-      "s3:ReplicateDelete",
-      "s3:ReplicateTags",
-    ]
+#     actions = [
+#       "s3:ReplicateObject",
+#       "s3:ReplicateDelete",
+#       "s3:ReplicateTags",
+#     ]
 
-    resources = [
-      "${module.central_bucket.s3_bucket_arn}/*",
-      "${data.aws_s3_bucket.ct_logs.arn}/*"
-    ]
-  }
+#     resources = [
+#       "${module.central_bucket.s3_bucket_arn}/*",
+#       "${data.aws_s3_bucket.ct_logs.arn}/*"
+#     ]
+#   }
 
-  statement {
-    effect = "Allow"
+#   statement {
+#     effect = "Allow"
 
-    actions = [
-      "kms:Decrypt",
-      "kms:GenerateDataKey"
-    ]
+#     actions = [
+#       "kms:Decrypt",
+#       "kms:GenerateDataKey"
+#     ]
 
-    resources = [
-      aws_kms_key.control_tower.arn
-    ]
-  }
+#     resources = [
+#       aws_kms_key.control_tower.arn
+#     ]
+#   }
 
-  statement {
-    effect = "Allow"
+#   statement {
+#     effect = "Allow"
 
-    actions = [
-      "kms:Encrypt",
-      "kms:GenerateDataKey"
-    ]
+#     actions = [
+#       "kms:Encrypt",
+#       "kms:GenerateDataKey"
+#     ]
 
-    resources = [
-      aws_kms_key.central_log_bucket.arn
-    ]
-  }
-}
+#     resources = [
+#       aws_kms_key.central_log_bucket.arn
+#     ]
+#   }
+# }
 
-resource "aws_iam_policy" "ct_logs_to_central_replication" {
-  provider = aws.log
+# resource "aws_iam_policy" "ct_logs_to_central_replication" {
+#   provider = aws.log
 
-  name   = "ct-central-logs-replication"
-  policy = data.aws_iam_policy_document.ct_logs_to_central_replication.json
-}
+#   name   = "ct-central-logs-replication"
+#   policy = data.aws_iam_policy_document.ct_logs_to_central_replication.json
+# }
 
-resource "aws_iam_role_policy_attachment" "ct_logs_to_central_replication" {
-  provider = aws.log
+# resource "aws_iam_role_policy_attachment" "ct_logs_to_central_replication" {
+#   provider = aws.log
 
-  role       = aws_iam_role.ct_logs_to_central_replication.name
-  policy_arn = aws_iam_policy.ct_logs_to_central_replication.arn
-}
+#   role       = aws_iam_role.ct_logs_to_central_replication.name
+#   policy_arn = aws_iam_policy.ct_logs_to_central_replication.arn
+# }
 
 
 # Bucket policy to allow replication of objects from hubandspoke and control tower
@@ -446,8 +445,8 @@ data "aws_iam_policy_document" "central_logs_bucket" {
     principals {
       type = "AWS"
       identifiers = [
-        aws_iam_role.hubandspoke_to_central.arn,         # hubandspoke bucket to central bucket
-        aws_iam_role.ct_logs_to_central_replication.arn, # control tower bucket to central bucket
+        aws_iam_role.hubandspoke_to_central.arn,    # hubandspoke bucket to central bucket
+        aws_iam_role.combined_logs_replication.arn, # control tower bucket to central bucket
       ]
     }
     actions = [
@@ -464,8 +463,8 @@ data "aws_iam_policy_document" "central_logs_bucket" {
     principals {
       type = "AWS"
       identifiers = [
-        aws_iam_role.hubandspoke_to_central.arn,         # hubandspoke bucket to central bucket
-        aws_iam_role.ct_logs_to_central_replication.arn, # control tower bucket to central bucket
+        aws_iam_role.hubandspoke_to_central.arn,    # hubandspoke bucket to central bucket
+        aws_iam_role.combined_logs_replication.arn, # control tower bucket to central bucket
       ]
     }
     actions = [

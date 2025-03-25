@@ -621,7 +621,6 @@ resource "aws_kms_key_policy" "hubandspoke_s3" {
         Effect = "Allow"
         Principal = {
           AWS = [
-            aws_iam_role.ct_logs_to_central_replication.arn,
             aws_iam_role.combined_logs_replication.arn,
           ]
         }
@@ -733,43 +732,6 @@ data "aws_iam_policy_document" "cloudtrail_log_delivery" {
     ]
   }
 }
-
-# resource "aws_s3_bucket_replication_configuration" "org_cloudtrail_logs" {
-#   provider = aws.log
-
-#   role   = aws_iam_role.ct_logs_to_central_replication.arn
-#   bucket = data.aws_s3_bucket.ct_logs.id
-
-#   rule {
-#     id     = "org-cloudtrail"
-#     status = "Enabled"
-
-#     destination {
-#       bucket        = module.s3_org_cloudtrail_logs.s3_bucket_arn
-#       storage_class = "STANDARD"
-#       encryption_configuration {
-#         replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
-#       }
-#     }
-
-#     source_selection_criteria {
-#       replica_modifications {
-#         status = "Enabled"
-#       }
-#       sse_kms_encrypted_objects {
-#         status = "Enabled"
-#       }
-#     }
-
-#     filter {
-#       prefix = "${var.aws_organization_id}/AWSLogs/${var.aws_organization_id}/*/CloudTrail/"
-#     }
-
-#     delete_marker_replication {
-#       status = "Enabled"
-#     }
-#   }
-# }
 
 module "s3_org_config_logs" {
   providers = { aws = aws.hubandspoke }
