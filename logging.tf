@@ -865,7 +865,7 @@ data "aws_iam_policy_document" "config_log_delivery" {
 locals {
   account_priorities = {
     "log"         = 0
-    "archive"     = 1
+    "audit"       = 1
     "management"  = 2
     "hubandspoke" = 3
   }
