@@ -186,7 +186,8 @@ resource "aws_kms_key_policy" "control_tower" {
         Effect = "Allow"
         Principal = {
           AWS = [
-            aws_iam_role.ct_logs_replication.arn
+            aws_iam_role.ct_logs_to_central_replication.arn,
+            aws_iam_role.combined_logs_replication.arn,
           ]
         }
         Action = [
@@ -240,8 +241,8 @@ resource "aws_kms_key_policy" "central_log_bucket" {
         Effect = "Allow"
         Principal = {
           AWS = [
-            aws_iam_role.hubandspoke_to_central.arn, # hubandspoke bucket to central bucket
-            aws_iam_role.ct_logs_replication.arn,    # control tower bucket to central bucket
+            aws_iam_role.hubandspoke_to_central.arn,         # hubandspoke bucket to central bucket
+            aws_iam_role.ct_logs_to_central_replication.arn, # control tower bucket to central bucket
             # "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:root"
           ]
         }
@@ -341,14 +342,14 @@ data "aws_iam_policy_document" "s3_assume_role" {
   }
 }
 
-resource "aws_iam_role" "ct_logs_replication" {
+resource "aws_iam_role" "ct_logs_to_central_replication" {
   provider = aws.log
 
   name               = "ct-central-logs-replication"
   assume_role_policy = data.aws_iam_policy_document.s3_assume_role.json
 }
 
-data "aws_iam_policy_document" "ct_logs_replication" {
+data "aws_iam_policy_document" "ct_logs_to_central_replication" {
   provider = aws.log
 
   statement {
@@ -416,18 +417,18 @@ data "aws_iam_policy_document" "ct_logs_replication" {
   }
 }
 
-resource "aws_iam_policy" "ct_logs_replication" {
+resource "aws_iam_policy" "ct_logs_to_central_replication" {
   provider = aws.log
 
   name   = "ct-central-logs-replication"
-  policy = data.aws_iam_policy_document.ct_logs_replication.json
+  policy = data.aws_iam_policy_document.ct_logs_to_central_replication.json
 }
 
-resource "aws_iam_role_policy_attachment" "ct_logs_replication" {
+resource "aws_iam_role_policy_attachment" "ct_logs_to_central_replication" {
   provider = aws.log
 
-  role       = aws_iam_role.ct_logs_replication.name
-  policy_arn = aws_iam_policy.ct_logs_replication.arn
+  role       = aws_iam_role.ct_logs_to_central_replication.name
+  policy_arn = aws_iam_policy.ct_logs_to_central_replication.arn
 }
 
 
@@ -445,8 +446,8 @@ data "aws_iam_policy_document" "central_logs_bucket" {
     principals {
       type = "AWS"
       identifiers = [
-        aws_iam_role.hubandspoke_to_central.arn, # hubandspoke bucket to central bucket
-        aws_iam_role.ct_logs_replication.arn,    # control tower bucket to central bucket
+        aws_iam_role.hubandspoke_to_central.arn,         # hubandspoke bucket to central bucket
+        aws_iam_role.ct_logs_to_central_replication.arn, # control tower bucket to central bucket
       ]
     }
     actions = [
@@ -463,8 +464,8 @@ data "aws_iam_policy_document" "central_logs_bucket" {
     principals {
       type = "AWS"
       identifiers = [
-        aws_iam_role.hubandspoke_to_central.arn, # hubandspoke bucket to central bucket
-        aws_iam_role.ct_logs_replication.arn,    # control tower bucket to central bucket
+        aws_iam_role.hubandspoke_to_central.arn,         # hubandspoke bucket to central bucket
+        aws_iam_role.ct_logs_to_central_replication.arn, # control tower bucket to central bucket
       ]
     }
     actions = [

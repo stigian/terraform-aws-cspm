@@ -617,11 +617,12 @@ resource "aws_kms_key_policy" "hubandspoke_s3" {
         # }
       },
       {
-        Sid    = "Allow replication role to use KMS for decryption"
+        Sid    = "Allow replication roles to use KMS for encryption"
         Effect = "Allow"
         Principal = {
           AWS = [
-            aws_iam_role.ct_logs_replication.arn
+            aws_iam_role.ct_logs_to_central_replication.arn,
+            aws_iam_role.combined_logs_replication.arn,
           ]
         }
         Action = [
@@ -694,7 +695,7 @@ data "aws_iam_policy_document" "cloudtrail_log_delivery" {
     principals {
       type = "AWS"
       identifiers = [
-        aws_iam_role.ct_logs_replication.arn
+        aws_iam_role.combined_logs_replication.arn
       ]
     }
 
@@ -717,7 +718,7 @@ data "aws_iam_policy_document" "cloudtrail_log_delivery" {
     principals {
       type = "AWS"
       identifiers = [
-        aws_iam_role.ct_logs_replication.arn,
+        aws_iam_role.combined_logs_replication.arn,
       ]
     }
 
@@ -736,7 +737,7 @@ data "aws_iam_policy_document" "cloudtrail_log_delivery" {
 # resource "aws_s3_bucket_replication_configuration" "org_cloudtrail_logs" {
 #   provider = aws.log
 
-#   role   = aws_iam_role.ct_logs_replication.arn
+#   role   = aws_iam_role.ct_logs_to_central_replication.arn
 #   bucket = data.aws_s3_bucket.ct_logs.id
 
 #   rule {
@@ -820,7 +821,7 @@ data "aws_iam_policy_document" "config_log_delivery" {
     principals {
       type = "AWS"
       identifiers = [
-        aws_iam_role.ct_logs_replication.arn
+        aws_iam_role.combined_logs_replication.arn
       ]
     }
 
@@ -843,7 +844,7 @@ data "aws_iam_policy_document" "config_log_delivery" {
     principals {
       type = "AWS"
       identifiers = [
-        aws_iam_role.ct_logs_replication.arn,
+        aws_iam_role.combined_logs_replication.arn,
       ]
     }
 
