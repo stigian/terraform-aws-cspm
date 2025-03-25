@@ -1143,7 +1143,7 @@ resource "aws_s3_bucket_replication_configuration" "ct_logs_replication" {
 
 ## Temp
 
-resource "aws_s3_bucket_notification" "bucket_notification" {
+resource "aws_s3_bucket_notification" "org_cloudtrail_repl" {
   bucket = module.s3_org_cloudtrail_logs.s3_bucket_id
 
   queue {
@@ -1153,7 +1153,7 @@ resource "aws_s3_bucket_notification" "bucket_notification" {
   }
 }
 
-resource "aws_s3_bucket_notification" "bucket_notification" {
+resource "aws_s3_bucket_notification" "org_config_repl" {
   bucket = module.s3_org_config_logs.s3_bucket_id
 
   queue {
