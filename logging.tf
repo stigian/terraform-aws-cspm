@@ -1144,7 +1144,8 @@ resource "aws_s3_bucket_replication_configuration" "ct_logs_replication" {
 ## Temp
 
 resource "aws_s3_bucket_notification" "org_cloudtrail_repl" {
-  bucket = module.s3_org_cloudtrail_logs.s3_bucket_id
+  provider = aws.log
+  bucket   = module.s3_org_cloudtrail_logs.s3_bucket_id
 
   queue {
     queue_arn = aws_sqs_queue.repl.arn
@@ -1154,7 +1155,8 @@ resource "aws_s3_bucket_notification" "org_cloudtrail_repl" {
 }
 
 resource "aws_s3_bucket_notification" "org_config_repl" {
-  bucket = module.s3_org_config_logs.s3_bucket_id
+  provider = aws.log
+  bucket   = module.s3_org_config_logs.s3_bucket_id
 
   queue {
     queue_arn = aws_sqs_queue.repl.arn
@@ -1165,6 +1167,7 @@ resource "aws_s3_bucket_notification" "org_config_repl" {
 
 
 resource "aws_sqs_queue" "repl" {
+  provider = aws.log
 
   name                       = "temp_repl_events"
   visibility_timeout_seconds = 300 # 5 minutes minimum per Splunk docs
@@ -1177,11 +1180,13 @@ resource "aws_sqs_queue" "repl" {
 }
 
 resource "aws_sqs_queue" "repl_dlq" {
+  provider = aws.log
 
   name = "cega_dlq_splunk_events"
 }
 
 resource "aws_sqs_queue_redrive_allow_policy" "repl_dlq" {
+  provider = aws.log
 
   queue_url = aws_sqs_queue.repl_dlq.id
 
@@ -1193,6 +1198,7 @@ resource "aws_sqs_queue_redrive_allow_policy" "repl_dlq" {
 
 
 data "aws_iam_policy_document" "repl" {
+  provider = aws.log
   statement {
     sid     = "AllowS3ToSQS"
     effect  = "Allow"
@@ -1239,6 +1245,7 @@ data "aws_iam_policy_document" "repl" {
 }
 
 resource "aws_sqs_queue_policy" "repl" {
+  provider = aws.log
 
   queue_url = aws_sqs_queue.repl.id
   policy    = data.aws_iam_policy_document.repl.json
