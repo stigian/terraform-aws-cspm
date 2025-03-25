@@ -553,7 +553,6 @@ resource "aws_kms_key_policy" "hubandspoke_s3" {
         Principal = {
           AWS = [
             data.aws_caller_identity.hubandspoke.arn,
-            aws_iam_role.org_logs_to_hubandspoke.arn,
             "arn:${data.aws_partition.hubandspoke.partition}:iam::${data.aws_caller_identity.hubandspoke.account_id}:root",
           ]
         }
@@ -616,6 +615,20 @@ resource "aws_kms_key_policy" "hubandspoke_s3" {
         #     "aws:PrincipalOrgID" = data.aws_organizations_organization.hubandspoke.id
         #   }
         # }
+      },
+      {
+        Sid    = "Allow replication role to use KMS for decryption"
+        Effect = "Allow"
+        Principal = {
+          AWS = [
+            aws_iam_role.org_logs_to_hubandspoke.arn
+          ]
+        }
+        Action = [
+          "kms:Encrypt",
+          "kms:GenerateDataKey"
+        ]
+        Resource = aws_kms_key.control_tower.arn
       }
     ]
   })

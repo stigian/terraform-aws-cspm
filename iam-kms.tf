@@ -180,6 +180,20 @@ resource "aws_kms_key_policy" "control_tower" {
             "kms:EncryptionContext:aws:cloudtrail:arn" = "arn:${data.aws_partition.management.partition}:cloudtrail:*:${local.management_account_id}:trail/*"
           }
         }
+      },
+      {
+        Sid    = "Allow replication role to use KMS for decryption"
+        Effect = "Allow"
+        Principal = {
+          AWS = [
+            aws_iam_role.org_logs_to_hubandspoke.arn
+          ]
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey"
+        ]
+        Resource = aws_kms_key.control_tower.arn
       }
     ]
   })
