@@ -628,7 +628,7 @@ resource "aws_kms_key_policy" "hubandspoke_s3" {
           "kms:Encrypt",
           "kms:GenerateDataKey"
         ]
-        Resource = aws_kms_key.control_tower.arn
+        Resource = aws_kms_key.hubandspoke_s3.arn
       }
     ]
   })
