@@ -671,6 +671,7 @@ data "aws_iam_policy_document" "combined_logs_replication" {
 
     resources = [
       aws_kms_key.hubandspoke_s3.arn,
+      aws_kms_key.central_log_bucket.arn,
     ]
   }
 }
