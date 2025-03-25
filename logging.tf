@@ -870,8 +870,9 @@ resource "aws_s3_bucket_replication_configuration" "combined_logs_replication" {
 
   # Rule to send everything to the central bucket
   rule {
-    id     = "everything"
-    status = "Enabled"
+    id       = "everything"
+    priority = 100
+    status   = "Enabled"
     filter {}
     delete_marker_replication {
       status = "Enabled"
