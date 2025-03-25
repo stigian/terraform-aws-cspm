@@ -1110,99 +1110,98 @@ module "central_bucket" {
 # Debug
 ###############################################################################
 
-resource "aws_s3_bucket_notification" "org_log_repl" {
-  provider = aws.log
-  bucket   = data.aws_s3_bucket.ct_logs.id
+# resource "aws_s3_bucket_notification" "org_log_repl" {
+#   provider = aws.log
+#   bucket   = data.aws_s3_bucket.ct_logs.id
 
-  queue {
-    queue_arn = aws_sqs_queue.repl.arn
-    events    = ["s3:Replication:OperationFailedReplication"]
-    # filter_suffix = ".log"
-  }
-}
+#   queue {
+#     queue_arn = aws_sqs_queue.repl.arn
+#     events    = ["s3:Replication:OperationFailedReplication"]
+#     # filter_suffix = ".log"
+#   }
+# }
 
-resource "aws_sqs_queue" "repl" {
-  provider = aws.log
+# resource "aws_sqs_queue" "repl" {
+#   provider = aws.log
 
-  name                       = "temp_repl_events"
-  visibility_timeout_seconds = 300 # 5 minutes minimum per Splunk docs
-  redrive_policy = jsonencode({
-    deadLetterTargetArn = aws_sqs_queue.repl_dlq.arn
-    maxReceiveCount     = 4
-  })
+#   name                       = "temp_repl_events"
+#   visibility_timeout_seconds = 300 # 5 minutes minimum per Splunk docs
+#   redrive_policy = jsonencode({
+#     deadLetterTargetArn = aws_sqs_queue.repl_dlq.arn
+#     maxReceiveCount     = 4
+#   })
 
-  # tags = local.tags
-}
+#   # tags = local.tags
+# }
 
-resource "aws_sqs_queue" "repl_dlq" {
-  provider = aws.log
+# resource "aws_sqs_queue" "repl_dlq" {
+#   provider = aws.log
 
-  name = "temp_repl_events_dlq"
-}
+#   name = "temp_repl_events_dlq"
+# }
 
-resource "aws_sqs_queue_redrive_allow_policy" "repl_dlq" {
-  provider = aws.log
+# resource "aws_sqs_queue_redrive_allow_policy" "repl_dlq" {
+#   provider = aws.log
 
-  queue_url = aws_sqs_queue.repl_dlq.id
+#   queue_url = aws_sqs_queue.repl_dlq.id
 
-  redrive_allow_policy = jsonencode({
-    redrivePermission = "byQueue",
-    sourceQueueArns   = [aws_sqs_queue.repl.arn]
-  })
-}
+#   redrive_allow_policy = jsonencode({
+#     redrivePermission = "byQueue",
+#     sourceQueueArns   = [aws_sqs_queue.repl.arn]
+#   })
+# }
 
 
-data "aws_iam_policy_document" "repl" {
-  provider = aws.log
-  statement {
-    sid     = "AllowS3ToSQS"
-    effect  = "Allow"
-    actions = ["SQS:SendMessage"]
+# data "aws_iam_policy_document" "repl" {
+#   provider = aws.log
+#   statement {
+#     sid     = "AllowS3ToSQS"
+#     effect  = "Allow"
+#     actions = ["SQS:SendMessage"]
 
-    principals {
-      type        = "Service"
-      identifiers = ["s3.amazonaws.com"]
-    }
+#     principals {
+#       type        = "Service"
+#       identifiers = ["s3.amazonaws.com"]
+#     }
 
-    resources = [
-      "*"
-      # for key in keys(var.source_buckets) : aws_sqs_queue.events[key].arn,
-    ]
+#     resources = [
+#       "*"
+#       # for key in keys(var.source_buckets) : aws_sqs_queue.events[key].arn,
+#     ]
 
-    # condition {
-    #   test     = "ArnLike"
-    #   variable = "aws:SourceArn"
-    #   values = [
-    #     for key in keys(var.source_buckets) : data.aws_s3_bucket.source_buckets[key].arn
-    #   ]
-    # }
+#     # condition {
+#     #   test     = "ArnLike"
+#     #   variable = "aws:SourceArn"
+#     #   values = [
+#     #     for key in keys(var.source_buckets) : data.aws_s3_bucket.source_buckets[key].arn
+#     #   ]
+#     # }
 
-    condition {
-      test     = "StringEquals"
-      variable = "aws:SourceAccount"
-      values   = [data.aws_caller_identity.log.account_id]
-    }
-  }
+#     condition {
+#       test     = "StringEquals"
+#       variable = "aws:SourceAccount"
+#       values   = [data.aws_caller_identity.log.account_id]
+#     }
+#   }
 
-  statement {
-    sid    = "AllowSQSToKMS"
-    effect = "Allow"
-    principals {
-      type        = "Service"
-      identifiers = ["sqs.amazonaws.com"]
-    }
-    actions = [
-      "kms:GenerateDataKey",
-      "kms:Decrypt"
-    ]
-    resources = ["*"]
-  }
-}
+#   statement {
+#     sid    = "AllowSQSToKMS"
+#     effect = "Allow"
+#     principals {
+#       type        = "Service"
+#       identifiers = ["sqs.amazonaws.com"]
+#     }
+#     actions = [
+#       "kms:GenerateDataKey",
+#       "kms:Decrypt"
+#     ]
+#     resources = ["*"]
+#   }
+# }
 
-resource "aws_sqs_queue_policy" "repl" {
-  provider = aws.log
+# resource "aws_sqs_queue_policy" "repl" {
+#   provider = aws.log
 
-  queue_url = aws_sqs_queue.repl.id
-  policy    = data.aws_iam_policy_document.repl.json
-}
-
+#   queue_url = aws_sqs_queue.repl.id
+#   policy    = data.aws_iam_policy_document.repl.json
+# }
