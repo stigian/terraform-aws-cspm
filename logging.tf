@@ -1182,7 +1182,7 @@ resource "aws_sqs_queue" "repl" {
 resource "aws_sqs_queue" "repl_dlq" {
   provider = aws.log
 
-  name = "cega_dlq_splunk_events"
+  name = "temp_repl_events_dlq"
 }
 
 resource "aws_sqs_queue_redrive_allow_policy" "repl_dlq" {
