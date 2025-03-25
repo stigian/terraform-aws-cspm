@@ -1143,9 +1143,9 @@ resource "aws_s3_bucket_replication_configuration" "ct_logs_replication" {
 
 ## Temp
 
-resource "aws_s3_bucket_notification" "org_cloudtrail_repl" {
+resource "aws_s3_bucket_notification" "org_log_repl" {
   provider = aws.log
-  bucket   = module.s3_org_cloudtrail_logs.s3_bucket_id
+  bucket   = data.aws_s3_bucket.ct_logs.id
 
   queue {
     queue_arn = aws_sqs_queue.repl.arn
@@ -1153,18 +1153,6 @@ resource "aws_s3_bucket_notification" "org_cloudtrail_repl" {
     # filter_suffix = ".log"
   }
 }
-
-resource "aws_s3_bucket_notification" "org_config_repl" {
-  provider = aws.log
-  bucket   = module.s3_org_config_logs.s3_bucket_id
-
-  queue {
-    queue_arn = aws_sqs_queue.repl.arn
-    events    = ["s3:Replication:OperationFailedReplication"]
-    # filter_suffix = ".log"
-  }
-}
-
 
 resource "aws_sqs_queue" "repl" {
   provider = aws.log
