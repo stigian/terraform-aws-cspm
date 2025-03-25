@@ -865,6 +865,7 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
 
       destination {
         bucket        = module.s3_org_config_logs.s3_bucket_arn
+        account       = data.aws_caller_identity.hubandspoke.account_id
         storage_class = "STANDARD"
         encryption_configuration {
           replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
@@ -872,7 +873,9 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
         access_control_translation {
           owner = "Destination"
         }
-        account = data.aws_caller_identity.hubandspoke.account_id
+        metrics {
+          status = "Enabled"
+        }
       }
 
       source_selection_criteria {
@@ -904,6 +907,7 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
 
       destination {
         bucket        = module.s3_org_config_logs.s3_bucket_arn
+        account       = data.aws_caller_identity.hubandspoke.account_id
         storage_class = "STANDARD"
         encryption_configuration {
           replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
@@ -911,7 +915,9 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
         access_control_translation {
           owner = "Destination"
         }
-        account = data.aws_caller_identity.hubandspoke.account_id
+        metrics {
+          status = "Enabled"
+        }
       }
 
       source_selection_criteria {
@@ -943,6 +949,7 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
 
       destination {
         bucket        = module.s3_org_cloudtrail_logs.s3_bucket_arn
+        account       = data.aws_caller_identity.hubandspoke.account_id
         storage_class = "STANDARD"
         encryption_configuration {
           replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
@@ -950,7 +957,9 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
         access_control_translation {
           owner = "Destination"
         }
-        account = data.aws_caller_identity.hubandspoke.account_id
+        metrics {
+          status = "Enabled"
+        }
       }
 
       source_selection_criteria {
@@ -982,6 +991,7 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
 
       destination {
         bucket        = module.s3_org_cloudtrail_logs.s3_bucket_arn
+        account       = data.aws_caller_identity.hubandspoke.account_id
         storage_class = "STANDARD"
         encryption_configuration {
           replica_kms_key_id = aws_kms_key.hubandspoke_s3.arn
@@ -989,7 +999,9 @@ resource "aws_s3_bucket_replication_configuration" "org_logs_to_hubandspoke" {
         access_control_translation {
           owner = "Destination"
         }
-        account = data.aws_caller_identity.hubandspoke.account_id
+        metrics {
+          status = "Enabled"
+        }
       }
 
       source_selection_criteria {
