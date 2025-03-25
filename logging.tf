@@ -861,7 +861,7 @@ resource "aws_s3_bucket_replication_configuration" "combined_logs_replication" {
     }
   }
 
-  # Dynamic rules for specific logs
+  # Dynamic rules sending config and cloudtrail logs to hubandspoke for SIEM ingest
   dynamic "rule" {
     for_each = var.account_id_map
 
