@@ -1164,7 +1164,7 @@ resource "aws_s3_bucket_notification" "org_config_repl" {
 }
 
 
-resource "aws_sqs_queue" "cega" {
+resource "aws_sqs_queue" "repl" {
 
   name                       = "temp_repl_events"
   visibility_timeout_seconds = 300 # 5 minutes minimum per Splunk docs
