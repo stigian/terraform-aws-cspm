@@ -670,7 +670,7 @@ module "s3_org_cloudtrail_logs" {
   }
   logging = {
     target_bucket = module.s3_server_access_logs.s3_bucket_id
-    target_prefix = "org-cloudtrail/"
+    target_prefix = "s3-access/"
     target_object_key_format = {
       partitioned_prefix = {
         partition_date_source = "DeliveryTime" # "EventTime"
@@ -759,7 +759,7 @@ module "s3_org_config_logs" {
   }
   logging = {
     target_bucket = module.s3_server_access_logs.s3_bucket_id
-    target_prefix = "org-config/"
+    target_prefix = "s3-access/"
     target_object_key_format = {
       partitioned_prefix = {
         partition_date_source = "DeliveryTime" # "EventTime"
