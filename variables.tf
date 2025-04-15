@@ -41,11 +41,8 @@ variable "central_bucket_name_prefix" {
   default     = "org-central-logs"
 }
 
-variable "replication_role_name" {
-  type        = string
-  description = <<EOT
-    Name of the IAM role in the hub-and-spoke account used by S3 to replicate logs to the central bucket.
-    The role name is defined statically in the hubandspoke/logging.tf file and must match this value.
-  EOT
-  default     = "hubandspoke-central-logs-replication"
+variable "key_admin_arns" {
+  type        = list(string)
+  description = "List of ARNs for additional key administrators who can manage keys in the log archive account."
+  default     = []
 }

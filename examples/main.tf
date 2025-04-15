@@ -12,5 +12,4 @@ module "cspm" {
   account_id_map             = var.account_id_map
   aws_organization_id        = var.aws_organization_id
   central_bucket_name_prefix = var.central_bucket_name_prefix
-  replication_role_name      = var.replication_role_name
 }

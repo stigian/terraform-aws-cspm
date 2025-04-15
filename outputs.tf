@@ -1,5 +1,5 @@
 # output "account_ids" {
-#   value = data.aws_organizations_organization.this.accounts[*].id
+#   value = data.aws_organizations_organization.management.accounts[*].id
 # }
 
 output "central_bucket_kms_key_arn" {

@@ -26,9 +26,12 @@ data "aws_caller_identity" "audit" { provider = aws.audit }
 data "aws_caller_identity" "management" { provider = aws.management }
 data "aws_caller_identity" "hubandspoke" { provider = aws.hubandspoke }
 
+data "aws_region" "log" { provider = aws.log }
 data "aws_region" "audit" { provider = aws.audit }
+data "aws_region" "hubandspoke" { provider = aws.hubandspoke }
 
-data "aws_organizations_organization" "this" { provider = aws.management }
+data "aws_organizations_organization" "hubandspoke" { provider = aws.hubandspoke }
+data "aws_organizations_organization" "management" { provider = aws.management }
 
 # Also enables Trusted Access in the management account.
 resource "aws_organizations_organization" "this" {
@@ -242,7 +245,7 @@ resource "aws_controltower_landing_zone" "this" {
 
 data "aws_organizations_organizational_units" "this" {
   provider  = aws.management
-  parent_id = data.aws_organizations_organization.this.roots[0].id
+  parent_id = data.aws_organizations_organization.management.roots[0].id
 }
 
 # data "aws_controltower_controls" "this" {
@@ -354,7 +357,7 @@ resource "aws_securityhub_configuration_policy" "this" {
 # account -> Security Hub -> Settings -> Configuration -> Organization tab.
 resource "aws_securityhub_configuration_policy_association" "root" {
   provider  = aws.audit
-  target_id = data.aws_organizations_organization.this.roots[0].id
+  target_id = data.aws_organizations_organization.management.roots[0].id
   policy_id = aws_securityhub_configuration_policy.this.id
 }
 
@@ -383,136 +386,3 @@ resource "aws_securityhub_insight" "high" {
   }
   group_by_attribute = "AwsAccountId"
 }
-
-
-###############################################################################
-# Logging
-#
-# Control Tower configures several types of logging:
-#   - Control Tower activity logs
-#   - Organization-level Cloudtrail covering all accounts
-#   - Multi-account AWS Config
-# In addition to Cloudwatch Logs, these logs are stored in S3 in the log account.
-# It is the logs in S3 which we need to aggregate with the hubandspoke account-level
-# logs in preparation for ingestion into a SIEM. Control Tower sends these logs to
-# a bucket with a naming convention like:
-#   - aws-controltower-logs-${log_account_id}-${ct_home_region}
-#
-# https://docs.aws.amazon.com/controltower/latest/userguide/logging-and-monitoring.html
-###############################################################################
-
-locals {
-  # Bucket name for central log collection bucket in log account
-  central_bucket_name_prefix = "${var.central_bucket_name_prefix}-${local.log_account_id}"
-}
-# Find the bucket where CT sends logs
-data "aws_s3_bucket" "ct_logs" {
-  provider   = aws.log
-  bucket     = "aws-controltower-logs-${local.log_account_id}-${var.aws_region}"
-  depends_on = [aws_controltower_landing_zone.this]
-}
-
-module "central_bucket" {
-  providers = { aws = aws.log }
-  source    = "terraform-aws-modules/s3-bucket/aws"
-  version   = "~> 4.3"
-
-  bucket                                = local.central_bucket_name_prefix
-  force_destroy                         = false # prevent accidental deletion
-  control_object_ownership              = true
-  attach_deny_insecure_transport_policy = true
-  attach_require_latest_tls_policy      = true
-  attach_policy                         = true
-  policy                                = data.aws_iam_policy_document.central_logs_bucket.json
-
-  lifecycle_rule = [
-    {
-      id      = "OMB-M-21-31"
-      enabled = true
-      filter  = {}
-
-      transition = [
-        {
-          days          = 365
-          storage_class = "GLACIER"
-        },
-      ]
-
-      expiration = {
-        days = 913
-        # expired_object_delete_marker = true
-      }
-
-      # Keep the last 5 versions of a duplicate object for 30 days, then delete it
-      noncurrent_version_expiration = {
-        newer_noncurrent_versions = 5
-        days                      = 30
-      }
-    },
-  ]
-
-  server_side_encryption_configuration = {
-    rule = {
-      apply_server_side_encryption_by_default = {
-        kms_master_key_id = aws_kms_key.central_log_bucket.arn
-        sse_algorithm     = "aws:kms"
-      }
-    }
-  }
-
-  # TODO: add new bucket in log account as target for access logging recofds
-  # logging = {
-  #   target_bucket = module.s3_server_access_logs.s3_bucket_id
-  #   target_prefix = "s3-access/"
-  #   target_object_key_format = {
-  #     partitioned_prefix = {
-  #       partition_date_source = "DeliveryTime" # "EventTime"
-  #     }
-  #   }
-  # }
-
-  versioning = {
-    enabled    = true
-    mfa_delete = false # must be false for lifecycle rules to work
-  }
-}
-
-
-# Aggregate CT logs to central bucket. If we need to distribute the org-level
-# Cloudtrail logs to each account we can add more replication rules see link below:
-# - https://repost.aws/questions/QU_Q-w35OWRhW75A69-4Kfhw/control-tower-log-sharing-with-individual-accounts
-resource "aws_s3_bucket_replication_configuration" "replication" {
-  provider = aws.log
-  role     = aws_iam_role.replication.arn
-  bucket   = data.aws_s3_bucket.ct_logs.id
-
-  rule {
-    id     = "everything"
-    status = "Enabled"
-    filter {}
-    delete_marker_replication {
-      status = "Enabled"
-    }
-    source_selection_criteria {
-      replica_modifications {
-        status = "Enabled"
-      }
-      sse_kms_encrypted_objects {
-        status = "Enabled"
-      }
-    }
-
-    destination {
-      bucket        = module.central_bucket.s3_bucket_arn
-      storage_class = "STANDARD"
-      account       = data.aws_caller_identity.log.account_id
-      encryption_configuration {
-        replica_kms_key_id = aws_kms_key.central_log_bucket.arn
-      }
-      access_control_translation {
-        owner = "Destination"
-      }
-    }
-  }
-}
-
