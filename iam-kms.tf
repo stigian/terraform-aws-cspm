@@ -242,7 +242,6 @@ resource "aws_kms_key_policy" "central_log_bucket" {
           AWS = [
             aws_iam_role.hubandspoke_to_central.arn,    # hubandspoke bucket to central bucket
             aws_iam_role.combined_logs_replication.arn, # control tower bucket to central bucket
-            # "arn:${data.aws_partition.hubandspoke.partition}:iam::${local.hubandspoke_account_id}:root"
           ]
         }
         Action = [
@@ -556,7 +555,6 @@ data "aws_iam_policy_document" "combined_logs_replication" {
 
   statement {
     effect = "Allow"
-
     actions = [
       "kms:Decrypt",
       "kms:GenerateDataKey"

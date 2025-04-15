@@ -1,4 +1,4 @@
-# CNAP-CSPM
+# terraform-aws-cspm
 
 This module configures Cloud Security Posture Management (CSPM) in support of the DoD Zero Trust strategy. The design relies on the AWS Control Tower Landing Zone baseline version 3.3 as a starting point. Additional services are delegated, activated, and configured across the entire AWS Organization including:
 
