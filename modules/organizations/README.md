@@ -1,6 +1,6 @@
 # AWS Organizations Submodule
 
-This Terraform module manages AWS Organizations and Organizational Units (OUs) according to best practices from the [AWS Security Reference Architecture](https://docs.aws.amazon.com/prescriptive-guidance/latest/security-reference-architecture/architecture.html). It supports creating a new organization or importing an existing one, dynamically creates OUs, and can assign AWS accounts to specific OUs.
+This Terraform module manages AWS Organizations and Organizational Units (OUs) according to best practices from the [AWS Security Reference Architecture](https://docs.aws.amazon.com/prescriptive-guidance/latest/security-reference-architecture/architecture.html).
 
 ---
 
@@ -8,24 +8,28 @@ This Terraform module manages AWS Organizations and Organizational Units (OUs) a
 
 - Create or import an AWS Organization
 - Dynamically create OUs from a map variable
-- Assign AWS accounts to OUs using a flexible map/object structure
+- Assign **existing** AWS accounts to OUs using a flexible map/object structure
 - Merge global and resource-specific tags
 - Outputs for organization and OU IDs
+
+> [!NOTE]
+> This module only manages existing AWS accounts. It does not create new accounts at this time.
+>
+> For GovCloud, the `name` and `email` values must match what is currently set in the AWS Console. These values cannot be changed from GovCloud; updates must be made from the commercial (linked) account.
 
 ---
 
 ## Usage
 
+> [!NOTE]
+> Note: This module only manages existing AWS accounts. It does not create new accounts at this time.
+
 ```hcl
 module "organizations" {
   source = "./modules/organizations"
 
-  project = "my-project"
-  tags = {
-    Project   = "my-project"
-    Owner     = "alice"
-    Lifecycle = "prod"
-  }
+  project             = "my-project"
+  aws_organization_id = null # or set to existing org ID to import
 
   organizational_units = {
     Security = {
@@ -42,16 +46,15 @@ module "organizations" {
     }
   }
 
+  # All account IDs must refer to existing accounts.
   aws_account_parameters = {
     "111111111111" = {
       email     = "account1@example.com"
       lifecycle = "prod"
       name      = "Management"
       ou        = "Security"
-      tags      = {
-        Environment = "Production"
-        Team        = "DevOps"
-      }
+      tags      = { Environment = "Production" }
+      create_govcloud = false # Reserved for future use
     }
     "222222222222" = {
       email     = "account2@example.com"
@@ -59,18 +62,17 @@ module "organizations" {
       name      = "Workload"
       ou        = "Workloads_Prod"
       tags      = {}
+      create_govcloud = false # Reserved for future use
     }
   }
 
-  aws_organization_id = null # or set to existing org ID to import
+  tags = {
+    Project   = "my-project"
+    Owner     = "alice"
+    Lifecycle = "prod"
+  }
 }
 ```
-
----
-
-## GovCloud Note
-
-For existing GovCloud accounts, the `name` and `email` values **must match what is currently set in the AWS Console**. These values cannot be changed from GovCloud; updates must be made from the commercial (linked) account.
 
 ---
 
@@ -82,17 +84,29 @@ For existing GovCloud accounts, the `name` and `email` values **must match what 
 
 ---
 
+## Account Management Notes
+
+- The `create_govcloud` field in `aws_account_parameters` is reserved for future support of commercial + GovCloud account creation and is currently ignored.
+- All accounts must already exist; this module does not create new accounts yet.
+
+---
+
 ## Outputs Example
 
 ```hcl
 output "organization_id" {
   value = module.organizations.organization_id
 }
-
 output "organizational_unit_ids" {
   value = module.organizations.organizational_unit_ids
 }
 ```
+
+---
+
+## Commercial + GovCloud Account Creation (Planned)
+
+Currently, this module only manages existing AWS accounts. In the future, support may be added for creating new Commercial + GovCloud account pairs using the [`create_govcloud`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_account#create_govcloud) option. The `create_govcloud` field is included in the account parameters for future compatibility, but is not used at this time.
 
 ---
 

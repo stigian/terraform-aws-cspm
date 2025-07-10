@@ -102,38 +102,36 @@ variable "aws_account_parameters" {
 
     - Each key is an AWS account ID (12-digit string).
     - Each value is an object with:
-        - email:      The email address for the AWS account.
-                      For existing GovCloud accounts, this must match the current email shown in the AWS Console.
-        - lifecycle:  The lifecycle tag for the account (e.g., "prod", "nonprod").
-        - name:       The display name for the account.
-                      For existing GovCloud accounts, this must match the current account name shown in the AWS Console.
-        - ou:         The Organizational Unit (OU) name to assign the account to.
-                      Must match one of the OUs defined in 'organizational_units'.
-        - tags:       (Optional) Additional tags to apply to the account.
+        - email:         The email address for the AWS account.
+        - lifecycle:     The lifecycle tag for the account (e.g., "prod", "nonprod").
+        - name:          The display name for the account.
+        - ou:            The Organizational Unit (OU) name to assign the account to.
+        - tags:          (Optional) Additional tags to apply to the account.
+        - create_govcloud: (Optional, future use) Whether to create a GovCloud account paired with this commercial account. Currently ignored.
 
     Example:
       {
         "111111111111" = {
-          email     = "account1@example.com"
-          lifecycle = "prod"
-          name      = "Management"
-          ou        = "Security"
-          tags      = {
-            Environment = "Production"
-            Team        = "DevOps"
-          }
+          email          = "account1@example.com"
+          lifecycle      = "prod"
+          name           = "Management"
+          ou             = "Security"
+          tags           = { Environment = "Production" }
+          create_govcloud = false
         }
       }
 
     Notes:
-      - For existing GovCloud accounts, the 'name' and 'email' values must match what is currently set in the AWS Console. These values cannot be changed from GovCloud; updates must be made from the commercial (linked) account.
+      - All accounts must already exist; this module does not create new accounts yet.
       - The 'ou' value must correspond to an OU created by the module.
+      - The 'create_govcloud' field is reserved for future support of commercial+GovCloud account creation.
   EOT
   type = map(object({
-    email     = string
-    lifecycle = string
-    name      = string
-    ou        = string
-    tags      = optional(map(string), {})
+    email           = string
+    lifecycle       = string
+    name            = string
+    ou              = string
+    tags            = optional(map(string), {})
+    create_govcloud = optional(bool, false)
   }))
 }
