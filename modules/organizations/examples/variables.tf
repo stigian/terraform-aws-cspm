@@ -240,16 +240,3 @@ variable "aws_account_parameters" {
     }
   }
 }
-
-# Optional SSO Module Integration Variables
-variable "enable_sso_management" {
-  description = "Whether to enable SSO module integration for Identity Center management"
-  type        = bool
-  default     = false
-}
-
-variable "enable_entra_integration" {
-  description = "Whether to enable Entra ID integration in SSO module"
-  type        = bool
-  default     = false
-}

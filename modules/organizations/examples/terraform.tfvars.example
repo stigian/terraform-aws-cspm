@@ -210,7 +210,3 @@ aws_account_parameters = {
     }
   }
 }
-
-# SSO Integration (Optional)
-enable_sso_management   = false  # Set to true if using the SSO module
-enable_entra_integration = false  # Set to true if integrating with Entra ID

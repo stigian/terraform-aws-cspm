@@ -54,27 +54,8 @@ output "account_mapping" {
   sensitive   = false
 }
 
-# Example: Pass outputs to SSO module
-# module "sso" {
-#   source = "../../sso"
-#   
-#   project              = module.organizations.project
-#   global_tags          = module.organizations.global_tags
-#   account_role_mapping = {
-#     # Map from organizations output to SSO account role types
-#     for name, id in module.organizations.account_id_map : 
-#     local.account_name_to_role_mapping[name] => {
-#       account_name = name
-#       email       = var.aws_account_parameters[id].email
-#       ou_path     = var.aws_account_parameters[id].ou
-#     }
-#   }
-#   
-#   enable_sso_management    = var.enable_sso_management
-#   enable_entra_integration = var.enable_entra_integration
-# }
-
 # Example mapping from account names to SRA account role types
+# This mapping can be used by other modules (e.g., SSO, Control Tower)
 locals {
   account_name_to_role_mapping = {
     "Management Account"        = "management"

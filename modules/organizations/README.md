@@ -1,119 +1,3 @@
-# AWS Organizations Submodule
-
-This Terraform module manages AWS Organizations and Organizational Units (OUs) according to best practices from the [AWS Security Reference Architecture](https://docs.aws.amazon.com/prescriptive-guidance/latest/security-reference-architecture/architecture.html).
-
----
-
-## Features
-
-- Create or import an AWS Organization
-- Dynamically create OUs from a map variable
-- Assign **existing** AWS accounts to OUs using a flexible map/object structure
-- Merge global and resource-specific tags
-- Outputs for organization and OU IDs
-- **Automatic GovCloud Support**: Detects AWS GovCloud partition and automatically ignores account name changes
-
-> [!NOTE]
-> This module only manages existing AWS accounts. It does not create new accounts at this time.
->
-> For GovCloud, the `name` and `email` values must match what is currently set in the AWS Console. These values cannot be changed from GovCloud; updates must be made from the commercial (linked) account.
->
-> **Automatic GovCloud Detection**: When running in AWS GovCloud (aws-us-gov partition), the module automatically ignores changes to account names to prevent plan failures, since name changes can only be made from the paired commercial account.
-
----
-
-## Usage
-
-> [!NOTE]
-> Note: This module only manages existing AWS accounts. It does not create new accounts at this time.
-
-```hcl
-module "organizations" {
-  source = "./modules/organizations"
-
-  project             = "my-project"
-  aws_organization_id = null # or set to existing org ID to import
-
-  organizational_units = {
-    Security = {
-      lifecycle = "prod"
-      tags      = { Owner = "SecurityTeam" }
-    }
-    Workloads_Prod = {
-      lifecycle = "prod"
-      tags      = {}
-    }
-    Sandbox = {
-      lifecycle = "nonprod"
-      tags      = {}
-    }
-  }
-
-  # All account IDs must refer to existing accounts.
-  aws_account_parameters = {
-    "111111111111" = {
-      email     = "account1@example.com"
-      lifecycle = "prod"
-      name      = "Management"
-      ou        = "Security"
-      tags      = { Environment = "Production" }
-      create_govcloud = false # Reserved for future use
-    }
-    "222222222222" = {
-      email     = "account2@example.com"
-      lifecycle = "nonprod"
-      name      = "Workload"
-      ou        = "Workloads_Prod"
-      tags      = {}
-      create_govcloud = false # Reserved for future use
-    }
-  }
-
-  tags = {
-    Project   = "my-project"
-    Owner     = "alice"
-    Lifecycle = "prod"
-  }
-}
-```
-
----
-
-## Tagging Behavior
-
-- The `tags` variable provides global tags for all resources.
-- Resource-specific tags (e.g., per OU or account) are merged with global tags.
-- If a tag key exists in both, the resource-specific value takes precedence.
-
----
-
-## Account Management Notes
-
-- The `create_govcloud` field in `aws_account_parameters` is reserved for future support of commercial + GovCloud account creation and is currently ignored.
-- All accounts must already exist; this module does not create new accounts yet.
-
----
-
-## Outputs Example
-
-```hcl
-output "organization_id" {
-  value = module.organizations.organization_id
-}
-output "organizational_unit_ids" {
-  value = module.organizations.organizational_unit_ids
-}
-```
-
----
-
-## Commercial + GovCloud Account Creation (Planned)
-
-Currently, this module only manages existing AWS accounts. In the future, support may be added for creating new Commercial + GovCloud account pairs using the [`create_govcloud`](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_account#create_govcloud) option. The `create_govcloud` field is included in the account parameters for future compatibility, but is not used at this time.
-
----
-
-<!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
@@ -156,7 +40,7 @@ No modules.
 
 | Name | Description |
 |------|-------------|
-| <a name="output_account_id_map"></a> [account\_id\_map](#output\_account\_id\_map) | Map of account names to account IDs for use by the SSO submodule. |
+| <a name="output_account_id_map"></a> [account\_id\_map](#output\_account\_id\_map) | Map of account names to account IDs for use by other modules (e.g., SSO, Control Tower). |
 | <a name="output_account_organizational_units"></a> [account\_organizational\_units](#output\_account\_organizational\_units) | Map of account IDs to their OU names. |
 | <a name="output_account_resources"></a> [account\_resources](#output\_account\_resources) | Map of account resources (abstracts commercial vs govcloud partition differences) |
 | <a name="output_aws_partition"></a> [aws\_partition](#output\_aws\_partition) | The AWS partition (aws or aws-us-gov) where the organization is running. |
@@ -165,4 +49,3 @@ No modules.
 | <a name="output_organization_id"></a> [organization\_id](#output\_organization\_id) | The AWS Organization ID. |
 | <a name="output_organizational_unit_ids"></a> [organizational\_unit\_ids](#output\_organizational\_unit\_ids) | Map of OU names to their AWS Organization Unit IDs. |
 | <a name="output_project"></a> [project](#output\_project) | Project name for use by submodules. |
-<!-- END_TF_DOCS -->

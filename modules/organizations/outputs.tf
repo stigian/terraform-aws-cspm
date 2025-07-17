@@ -9,7 +9,7 @@ output "organizational_unit_ids" {
 }
 
 output "account_id_map" {
-  description = "Map of account names to account IDs for use by the SSO submodule."
+  description = "Map of account names to account IDs for use by other modules (e.g., SSO, Control Tower)."
   value       = { for account_id, account in var.aws_account_parameters : account.name => account_id }
 }
 
