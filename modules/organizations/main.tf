@@ -1,5 +1,8 @@
 data "aws_organizations_organization" "this" { provider = aws.management }
 
+# Detect AWS partition to determine if we're running in GovCloud
+data "aws_partition" "current" { provider = aws.management }
+
 resource "aws_organizations_organization" "this" {
   provider = aws.management
 
@@ -36,9 +39,10 @@ resource "aws_organizations_organizational_unit" "this" {
   )
 }
 
-resource "aws_organizations_account" "this" {
+# AWS Organizations accounts for commercial AWS (normal lifecycle behavior)
+resource "aws_organizations_account" "commercial" {
   provider = aws.management
-  for_each = var.aws_account_parameters
+  for_each = data.aws_partition.current.partition != "aws-us-gov" ? var.aws_account_parameters : {}
 
   name      = each.value.name
   email     = each.value.email
@@ -48,4 +52,24 @@ resource "aws_organizations_account" "this" {
     var.global_tags,
     { Lifecycle = each.value.lifecycle },
   )
+}
+
+# AWS Organizations accounts for GovCloud (ignore name changes)
+resource "aws_organizations_account" "govcloud" {
+  provider = aws.management
+  for_each = data.aws_partition.current.partition == "aws-us-gov" ? var.aws_account_parameters : {}
+
+  name      = each.value.name
+  email     = each.value.email
+  parent_id = each.value.ou != "Root" ? aws_organizations_organizational_unit.this[each.value.ou].id : data.aws_organizations_organization.this.roots[0].id
+
+  tags = merge(
+    var.global_tags,
+    { Lifecycle = each.value.lifecycle },
+  )
+
+  # In AWS GovCloud, account names can only be changed from the paired commercial account
+  lifecycle {
+    ignore_changes = [name]
+  }
 }

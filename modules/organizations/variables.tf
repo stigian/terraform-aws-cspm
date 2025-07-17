@@ -105,17 +105,25 @@ variable "aws_account_parameters" {
         - email:         The primary email address for the AWS account.
         - lifecycle:     The lifecycle tag for the account (e.g., "prod", "nonprod").
         - name:          The display name for the account.
-        - ou:            The Organizational Unit (OU) name to assign the account to.
+        - ou:            The Organizational Unit (OU) name to assign the account to, or "Root" for management account.
         - tags:          (Optional) Additional tags to apply to the account.
         - create_govcloud: (Optional, future use) Whether to create a GovCloud account paired with this commercial account. Currently ignored.
 
     Example:
       {
         "111111111111" = {
-          email          = "account1@example.com"
+          email          = "management@example.com"
           lifecycle      = "prod"
           name           = "Management"
-          ou             = "Security"
+          ou             = "Root"               # Management account stays at org root per AWS SRA
+          tags           = { Environment = "Production" }
+          create_govcloud = false
+        }
+        "222222222222" = {
+          email          = "workload@example.com"
+          lifecycle      = "prod"
+          name           = "Workload"
+          ou             = "Workloads_Prod"     # Member accounts go in OUs
           tags           = { Environment = "Production" }
           create_govcloud = false
         }
@@ -123,7 +131,8 @@ variable "aws_account_parameters" {
 
     Notes:
       - All accounts must already exist; this module does not create new accounts yet.
-      - The 'ou' value must correspond to an OU created by the module.
+      - The management account should use ou = "Root" per AWS Security Reference Architecture.
+      - Member account 'ou' values must correspond to OUs created by the module.
       - The 'create_govcloud' field is reserved for future support of commercial+GovCloud account creation.
   EOT
   type = map(object({
@@ -134,4 +143,39 @@ variable "aws_account_parameters" {
     tags            = optional(map(string), {})
     create_govcloud = optional(bool, false)
   }))
+
+  validation {
+    condition     = alltrue([for k in keys(var.aws_account_parameters) : can(regex("^[0-9]{12}$", k))])
+    error_message = "All account IDs (keys) must be exactly 12 digits."
+  }
+
+  validation {
+    condition     = alltrue([for v in values(var.aws_account_parameters) : length(trimspace(v.email)) > 0 && can(regex("^\\S+@\\S+\\.\\S+$", v.email))])
+    error_message = "Each account must have a valid email address."
+  }
+
+  validation {
+    condition     = alltrue([for v in values(var.aws_account_parameters) : length(trimspace(v.name)) > 0])
+    error_message = "Each account must have a non-empty 'name'."
+  }
+
+  validation {
+    condition     = length(values(var.aws_account_parameters)[*].name) == length(distinct(values(var.aws_account_parameters)[*].name))
+    error_message = "Account names must be unique. Duplicate account names found."
+  }
+
+  validation {
+    condition     = alltrue([for v in values(var.aws_account_parameters) : length(trimspace(v.ou)) > 0])
+    error_message = "Each account must be assigned to a non-empty 'ou' (Organizational Unit)."
+  }
+
+  validation {
+    condition     = alltrue([for v in values(var.aws_account_parameters) : contains(["prod", "nonprod", "test", "dev", "staging"], v.lifecycle)])
+    error_message = "Each account 'lifecycle' must be one of: 'prod', 'nonprod', 'test', 'dev', or 'staging'."
+  }
+
+  validation {
+    condition     = alltrue([for v in values(var.aws_account_parameters) : v.ou == "Root" || contains(keys(var.organizational_units), v.ou)])
+    error_message = "Each account's 'ou' must reference an existing Organizational Unit defined in 'organizational_units' or be 'Root' for the management account."
+  }
 }
