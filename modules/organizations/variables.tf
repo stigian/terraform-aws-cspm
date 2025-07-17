@@ -4,7 +4,7 @@ variable "project" {
   default     = "demo"
 }
 
-variable "tags" {
+variable "global_tags" {
   description = "A map of tags to add to all resources. These are merged with any resource-specific tags."
   type        = map(string)
   default = {
@@ -38,7 +38,7 @@ variable "organizational_units" {
 
     - The key is the OU name.
     - The value is an object with:
-        - lifecycle: (string) The lifecycle tag for the OU (e.g., "prod", "test").
+        - lifecycle: (string) The lifecycle tag for the OU (e.g., "prod", "nonprod").
         - tags:      (optional map) Additional tags for the OU.
   EOT
   type = map(object({
@@ -102,7 +102,7 @@ variable "aws_account_parameters" {
 
     - Each key is an AWS account ID (12-digit string).
     - Each value is an object with:
-        - email:         The email address for the AWS account.
+        - email:         The primary email address for the AWS account.
         - lifecycle:     The lifecycle tag for the account (e.g., "prod", "nonprod").
         - name:          The display name for the account.
         - ou:            The Organizational Unit (OU) name to assign the account to.
