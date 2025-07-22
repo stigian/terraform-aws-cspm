@@ -102,35 +102,61 @@ variable "aws_account_parameters" {
     
     PREREQUISITE: All accounts must already exist (created via AWS Organizations CLI).
     
-    CONTROL TOWER REQUIREMENTS:
-    For Control Tower compatibility, these three accounts are REQUIRED:
-    - Management account: Must be in "Root" OU
-    - Log Archive account: Must be in "Security" OU  
-    - Audit account: Must be in "Security" OU
-    
-    Example:
+    CONTROL TOWER REQUIREMENTS (MINIMUM 3 ACCOUNTS):
+    If using Control Tower, these accounts are MANDATORY with specific configurations:
+
+    1. MANAGEMENT ACCOUNT (required):
+      - Must have: tags = { AccountType = "management" }
+      - Must be in: ou = "Root"
+      - Only one allowed
+
+    2. LOG ARCHIVE ACCOUNT (required):
+      - Must have: tags = { AccountType = "log_archive" }
+      - Must be in: ou = "Security"
+      - Only one allowed
+
+    3. AUDIT ACCOUNT (required):
+      - Must have: tags = { AccountType = "audit" }
+      - Must be in: ou = "Security"
+      - Only one allowed
+
+    REQUIRED AccountType tag values for Control Tower:
+    - "management" - AWS Organization management account
+    - "log_archive" - Log aggregation account
+    - "audit" - Security audit account
+
+    Optional AccountType tag values:
+    - "workload" - Application workload accounts
+    - "network" - Network hub/transit gateway accounts
+    - "shared_services" - Shared infrastructure accounts
+
+    Example (showing MINIMUM required accounts):
       {
+        # REQUIRED: Management Account
         "123456789012" = {
           name      = "YourCorp-Management"
           email     = "aws-mgmt@yourcorp.com"
-          ou        = "Root"
+          ou        = "Root"                           # REQUIRED: Must be Root
           lifecycle = "prod"
-          tags      = { AccountType = "management" }
+          tags      = { AccountType = "management" }   # REQUIRED: Must be "management"
         }
+        # REQUIRED: Log Archive Account
         "234567890123" = {
           name      = "YourCorp-Security-LogArchive"
           email     = "aws-logs@yourcorp.com"
-          ou        = "Security"
-          lifecycle = "prod" 
-          tags      = { AccountType = "log_archive" }
+          ou        = "Security"                       # REQUIRED: Must be Security
+          lifecycle = "prod"
+          tags      = { AccountType = "log_archive" }  # REQUIRED: Must be "log_archive"
         }
+        # REQUIRED: Audit Account
         "345678901234" = {
           name      = "YourCorp-Security-Audit"
           email     = "aws-audit@yourcorp.com"
-          ou        = "Security"
+          ou        = "Security"                       # REQUIRED: Must be Security
           lifecycle = "prod"
-          tags      = { AccountType = "audit" }
+          tags      = { AccountType = "audit" }        # REQUIRED: Must be "audit"
         }
+        # OPTIONAL: Additional accounts
         "456789012345" = {
           name      = "YourCorp-Workload-Prod1"
           email     = "aws-prod-app1@yourcorp.com"
@@ -141,13 +167,22 @@ variable "aws_account_parameters" {
       }
 
     Available OUs (defined in organizational_units variable):
-    - "Root" - For management account only
-    - "Security" - For security/audit/log archive accounts  
+    - "Root" - For management account ONLY
+    - "Security" - For log_archive and audit accounts (REQUIRED)
     - "Infrastructure_Prod" - For production infrastructure
     - "Infrastructure_Test" - For test infrastructure
     - "Workloads_Prod" - For production workloads
-    - "Workloads_Test" - For test workloads  
+    - "Workloads_Test" - For test workloads
     - "Sandbox" - For experimental/sandbox accounts
+    - "Policy_Staging" - For policy testing
+    - "Suspended" - For suspended accounts
+
+    Parameters for each account:
+    - name: Display name for the account (must match existing account name)
+    - email: Primary email address (must match existing account email)
+    - ou: Organizational Unit name (must match an OU from organizational_units)
+    - lifecycle: Environment lifecycle ("prod" or "nonprod")
+    - tags: Map of additional tags (AccountType tag REQUIRED for Control Tower)
     - "Policy_Staging" - For policy testing
     - "Suspended" - For suspended accounts
 
@@ -252,5 +287,30 @@ variable "aws_account_parameters" {
       v if lookup(v.tags, "AccountType", "") == "audit"
     ]) <= 1
     error_message = "Control Tower allows only one audit account (AccountType = 'audit')."
+  }
+
+  # Control Tower requirement: Must have at least one of each required account type
+  validation {
+    condition = length([
+      for v in values(var.aws_account_parameters) :
+      v if lookup(v.tags, "AccountType", "") == "management"
+    ]) >= 1
+    error_message = "Control Tower requires at least one management account (AccountType = 'management'). Please add the AccountType tag to your management account."
+  }
+
+  validation {
+    condition = length([
+      for v in values(var.aws_account_parameters) :
+      v if lookup(v.tags, "AccountType", "") == "log_archive"
+    ]) >= 1
+    error_message = "Control Tower requires at least one log archive account (AccountType = 'log_archive'). Please add the AccountType tag to your log archive account."
+  }
+
+  validation {
+    condition = length([
+      for v in values(var.aws_account_parameters) :
+      v if lookup(v.tags, "AccountType", "") == "audit"
+    ]) >= 1
+    error_message = "Control Tower requires at least one audit account (AccountType = 'audit'). Please add the AccountType tag to your audit account."
   }
 }

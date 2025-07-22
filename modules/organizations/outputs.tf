@@ -42,3 +42,27 @@ output "account_resources" {
   description = "Map of account resources (abstracts commercial vs govcloud partition differences)"
   value       = data.aws_partition.current.partition == "aws-us-gov" ? aws_organizations_account.govcloud : aws_organizations_account.commercial
 }
+
+output "management_account_id" {
+  description = "Account ID for the management account"
+  value = try([
+    for id, config in var.aws_account_parameters : id
+    if lookup(config.tags, "AccountType", "") == "management"
+  ][0], null)
+}
+
+output "log_archive_account_id" {
+  description = "Account ID for the log archive account"
+  value = try([
+    for id, config in var.aws_account_parameters : id
+    if lookup(config.tags, "AccountType", "") == "log_archive"
+  ][0], null)
+}
+
+output "audit_account_id" {
+  description = "Account ID for the audit account"
+  value = try([
+    for id, config in var.aws_account_parameters : id
+    if lookup(config.tags, "AccountType", "") == "audit"
+  ][0], null)
+}

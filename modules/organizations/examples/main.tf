@@ -6,37 +6,26 @@
 
 # Configure the AWS Provider for the management account
 provider "aws" {
-  alias  = "management"
   region = var.aws_region
 
   # Use default credentials or configure as needed
-  # profile = "management-account-profile"
+  profile = "cnscca-gov-mgmt"
 }
 
 # AWS Organizations Module
 module "organizations" {
-  source = "../"
+  source = "../modules/organizations"
 
-  # Pass through the management provider
-  providers = {
-    aws.management = aws.management
-  }
-
-  # Basic Configuration
-  project = var.project
-
-  # Global tags applied to all resources
-  global_tags = var.global_tags
-
-  # Optional: Import existing organization by ID
-  # aws_organization_id = "o-1234567890"
-
-  # Organizational Units following AWS SRA structure
+  project              = var.project
+  global_tags          = var.global_tags
   organizational_units = var.organizational_units
 
   # AWS Account Parameters
   # Note: All accounts must already exist - this module does not create accounts
   aws_account_parameters = var.aws_account_parameters
+
+  # Optional: Import existing organization by ID
+  # aws_organization_id = "o-1234567890"
 }
 
 # Example output usage

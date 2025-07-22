@@ -1,7 +1,7 @@
-data "aws_organizations_organization" "this" { provider = aws.management }
+data "aws_organizations_organization" "this" {}
 
 # Detect AWS partition to determine if we're running in GovCloud
-data "aws_partition" "current" { provider = aws.management }
+data "aws_partition" "current" {}
 
 # Process account parameters (no transformation needed since we use explicit ou/lifecycle)
 locals {
@@ -9,8 +9,6 @@ locals {
 }
 
 resource "aws_organizations_organization" "this" {
-  provider = aws.management
-
   aws_service_access_principals = [
     "cloudtrail.amazonaws.com",
     "config.amazonaws.com",
@@ -32,7 +30,6 @@ resource "aws_organizations_organization" "this" {
 }
 
 resource "aws_organizations_organizational_unit" "this" {
-  provider = aws.management
   for_each = var.organizational_units
 
   name      = each.key
@@ -46,7 +43,6 @@ resource "aws_organizations_organizational_unit" "this" {
 
 # AWS Organizations accounts for commercial AWS (normal lifecycle behavior)
 resource "aws_organizations_account" "commercial" {
-  provider = aws.management
   for_each = data.aws_partition.current.partition != "aws-us-gov" ? local.processed_accounts : {}
 
   name      = each.value.name
@@ -62,7 +58,6 @@ resource "aws_organizations_account" "commercial" {
 
 # AWS Organizations accounts for GovCloud (ignore name changes)
 resource "aws_organizations_account" "govcloud" {
-  provider = aws.management
   for_each = data.aws_partition.current.partition == "aws-us-gov" ? local.processed_accounts : {}
 
   name      = each.value.name
