@@ -1,16 +1,19 @@
 variable "project" {
-  description = "Name of the project or application. Used for naming resources."
+  description = "Name of the project or application. Used for resource naming and tagging."
   type        = string
   default     = "demo"
+
+  validation {
+    condition     = can(regex("^[a-z0-9-]+$", var.project))
+    error_message = "Project name must contain only lowercase letters, numbers, and hyphens."
+  }
 }
 
 variable "global_tags" {
-  description = "A map of tags to add to all resources. These are merged with any resource-specific tags."
+  description = "Tags applied to all resources created by this module."
   type        = map(string)
   default = {
-    Project    = "demo"
-    Owner      = "stigian"
-    Repository = "https://github.com/stigian/terraform-aws-cspm"
+    ManagedBy = "terraform"
   }
 }
 
@@ -295,7 +298,17 @@ variable "aws_account_parameters" {
       for v in values(var.aws_account_parameters) :
       v if lookup(v.tags, "AccountType", "") == "management"
     ]) >= 1
-    error_message = "Control Tower requires at least one management account (AccountType = 'management'). Please add the AccountType tag to your management account."
+    error_message = <<-EOT
+      Control Tower requires at least one management account (AccountType = 'management').
+      
+      Please add the AccountType tag to your management account:
+      Example:
+        "123456789012" = {
+          name = "MyOrg-Management"
+          ou   = "Root"
+          tags = { AccountType = "management" }  # Add this tag
+        }
+    EOT
   }
 
   validation {
@@ -303,7 +316,17 @@ variable "aws_account_parameters" {
       for v in values(var.aws_account_parameters) :
       v if lookup(v.tags, "AccountType", "") == "log_archive"
     ]) >= 1
-    error_message = "Control Tower requires at least one log archive account (AccountType = 'log_archive'). Please add the AccountType tag to your log archive account."
+    error_message = <<-EOT
+      Control Tower requires at least one log archive account (AccountType = 'log_archive').
+      
+      Please add the AccountType tag to your log archive account:
+      Example:
+        "234567890123" = {
+          name = "MyOrg-Security-LogArchive"
+          ou   = "Security"
+          tags = { AccountType = "log_archive" }  # Add this tag
+        }
+    EOT
   }
 
   validation {
@@ -311,6 +334,16 @@ variable "aws_account_parameters" {
       for v in values(var.aws_account_parameters) :
       v if lookup(v.tags, "AccountType", "") == "audit"
     ]) >= 1
-    error_message = "Control Tower requires at least one audit account (AccountType = 'audit'). Please add the AccountType tag to your audit account."
+    error_message = <<-EOT
+      Control Tower requires at least one audit account (AccountType = 'audit').
+      
+      Please add the AccountType tag to your audit account:
+      Example:
+        "345678901234" = {
+          name = "MyOrg-Security-Audit"
+          ou   = "Security"
+          tags = { AccountType = "audit" }  # Add this tag
+        }
+    EOT
   }
 }
