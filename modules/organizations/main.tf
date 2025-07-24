@@ -54,6 +54,10 @@ resource "aws_organizations_account" "commercial" {
     { Lifecycle = each.value.lifecycle },
     each.value.tags
   )
+
+  lifecycle {
+    prevent_destroy = true # prevents accidental deletion
+  }
 }
 
 # AWS Organizations accounts for GovCloud (ignore name changes)
@@ -70,8 +74,8 @@ resource "aws_organizations_account" "govcloud" {
     each.value.tags
   )
 
-  # In AWS GovCloud, account names can only be changed from the paired commercial account
   lifecycle {
-    ignore_changes = [name]
+    ignore_changes  = [name] # can only be changed from commercial account
+    prevent_destroy = true   # prevents accidental deletion
   }
 }
