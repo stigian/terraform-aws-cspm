@@ -1,11 +1,20 @@
 variable "project" {
-  description = "Name of the project or application. Used for naming resources."
+  description = "Name of the project or application. Used for resource naming and tagging."
   type        = string
+  default     = "demo"
+
+  validation {
+    condition     = can(regex("^[a-z0-9-]+$", var.project))
+    error_message = "Project name must contain only lowercase letters, numbers, and hyphens."
+  }
 }
 
 variable "global_tags" {
-  description = "A map of tags to add to all resources. These are merged with any resource-specific tags."
+  description = "Tags applied to all resources created by this module."
   type        = map(string)
+  default = {
+    ManagedBy = "terraform"
+  }
 }
 
 #####
@@ -14,19 +23,26 @@ variable "account_id_map" {
   description = <<-EOT
     Mapping of account names to AWS account IDs.
 
-    Required account types should include:
-      - management: The AWS Organization management account
+    CONTROL TOWER REQUIREMENTS (if using Control Tower):
+    The following account types are MANDATORY and must match your Organizations module:
+      - management: The AWS Organization management account (AccountType = "management")
+      - log_archive: Log aggregation and archive account (AccountType = "log_archive") 
+      - audit: Security audit account (AccountType = "audit")
+
+    Additional recommended account types:
       - network: Network/connectivity account (for Transit Gateway, etc.)
-      - log_archive: Log aggregation and archive account
-      - audit: Security audit account
+      - shared_services: Shared infrastructure services
 
     Example:
       {
-        "Management Account" = "111111111111"
-        "Network Account"    = "222222222222"
-        "Log Archive"        = "333333333333"
-        "Security Audit"     = "444444444444"
+        "YourCorp-Management"       = "123456789012"   # REQUIRED for Control Tower
+        "YourCorp-Security-Logs"    = "234567890123"   # REQUIRED for Control Tower  
+        "YourCorp-Security-Audit"   = "345678901234"   # REQUIRED for Control Tower
+        "YourCorp-Network-Hub"      = "456789012345"   # Optional
+        "YourCorp-Workload-Prod1"   = "567890123456"   # Optional
       }
+      
+    NOTE: Account names here must match the 'name' field in your aws_account_parameters
   EOT
   type        = map(string)
 }
@@ -36,22 +52,22 @@ variable "account_role_mapping" {
     Mapping of account names to their AWS SRA account types for SSO group assignments.
     
     Each key should match an account name from account_id_map.
-    Each value must be one of the standard AWS SRA account types:
+    Each value must be one of the standard AWS SRA account types.
     
-    **Core Foundation Accounts (Required):**
-    - management: Organization management account (stays at org root)
-    - log_archive: Centralized logging and long-term log storage
-    - audit: Security audit and compliance account
-    -
-    **Connectivity & Network Accounts:**
+    **CONTROL TOWER REQUIRED ACCOUNTS:**
+    - management: Organization management account (REQUIRED - AccountType = "management")
+    - log_archive: Centralized logging and log storage (REQUIRED - AccountType = "log_archive")  
+    - audit: Security audit and compliance (REQUIRED - AccountType = "audit")
+    
+    **Optional Connectivity & Network Accounts:**
     - network: Central network connectivity (Transit Gateway, Direct Connect, etc.)
     - shared_services: Shared infrastructure services (DNS, monitoring, etc.)
     
-    **Security Accounts:**
+    **Optional Security Accounts:**
     - security_tooling: Security tools and SIEM (often combined with audit)
     - backup: Centralized backup and disaster recovery
     
-    **Workload Accounts:**
+    **Optional Workload Accounts:**
     - workload_prod: Production workloads
     - workload_nonprod: Non-production workloads (dev, test, staging)
     - workload_sandbox: Experimental and sandbox environments
@@ -60,15 +76,16 @@ variable "account_role_mapping" {
     - deployment: CI/CD and deployment tools
     - data: Data lakes, analytics, and big data workloads
     
-    Example:
+    Example (showing MINIMUM required for Control Tower):
       {
-        "MyOrg Management"     = "management"
-        "Production Network"   = "network" 
-        "Security Log Archive" = "log_archive"
-        "Compliance Audit"     = "audit"
-        "ACME-prod-workload"   = "workload_prod"
-        "ACME-dev-workload"    = "workload_nonprod"
+        "YourCorp-Management"       = "management"     # REQUIRED
+        "YourCorp-Security-Logs"    = "log_archive"    # REQUIRED  
+        "YourCorp-Security-Audit"   = "audit"          # REQUIRED
+        "YourCorp-Network-Hub"      = "network"        # Optional
+        "YourCorp-Workload-Prod1"   = "workload_prod"  # Optional
       }
+      
+    NOTE: Account names must match exactly with account_id_map keys
   EOT
   type        = map(string)
   default     = {}
