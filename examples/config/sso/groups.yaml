@@ -1,0 +1,33 @@
+# SSO Groups Configuration
+# Defines IAM Identity Center groups and their associated permissions
+
+groups:
+  aws_admin:
+    description: "Full administrative access to AWS accounts"
+    managed_policies:
+      - "arn:aws-us-gov:iam::aws:policy/AdministratorAccess"
+
+  aws_power_user:
+    description: "Power user access (no IAM permissions)"
+    managed_policies:
+      - "arn:aws-us-gov:iam::aws:policy/PowerUserAccess"
+
+  aws_net_admin:
+    description: "Network administration access"
+    managed_policies:
+      - "arn:aws-us-gov:iam::aws:policy/job-function/NetworkAdministrator"
+
+  aws_sys_admin:
+    description: "System administration access"
+    managed_policies:
+      - "arn:aws-us-gov:iam::aws:policy/job-function/SystemAdministrator"
+
+  aws_sec_auditor:
+    description: "Security audit and compliance read-only access"
+    managed_policies:
+      - "arn:aws-us-gov:iam::aws:policy/SecurityAudit"
+
+  aws_cyber_sec_eng:
+    description: "Cybersecurity engineering access"
+    managed_policies:
+      - "arn:aws-us-gov:iam::aws:policy/PowerUserAccess"

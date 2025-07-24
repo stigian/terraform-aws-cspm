@@ -1,0 +1,16 @@
+# Infrastructure Organizational Units
+# OUs for infrastructure and shared services accounts
+
+Infrastructure_Prod:
+  lifecycle: prod
+  description: "Production infrastructure accounts (network, shared services)"
+  additional_tags:
+    Purpose: "Infrastructure"
+    Environment: "Production"
+
+Infrastructure_Test:
+  lifecycle: nonprod
+  description: "Non-production infrastructure accounts"
+  additional_tags:
+    Purpose: "Infrastructure"
+    Environment: "NonProduction"

@@ -1,0 +1,15 @@
+# Management Account Configuration
+# This is the AWS Organizations management account (payer account)
+# Required for Control Tower deployment
+
+management_account:
+  account_id: "227234344980"
+  account_name: "SCCA Root"
+  email: "nmmes-scca-test-org-root@stigian.com"
+  account_type: management # Maps to AccountType tag
+  ou: Root # Management account stays at org root per AWS SRA
+  lifecycle: prod
+  additional_tags:
+    Owner: "Central IT"
+    Purpose: "Organization Management"
+    Compliance: "Required"

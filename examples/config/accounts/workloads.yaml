@@ -1,0 +1,14 @@
+# Application Workload Accounts
+# Accounts for hosting application workloads and services
+
+workload_account:
+  account_id: "261632763096"
+  account_name: "nmmes-zt-test-app"
+  email: "nmmes-zt-test-app@stigian.com"
+  account_type: workload # Maps to AccountType tag
+  ou: Workloads_Prod # Production workload organizational unit
+  lifecycle: test
+  additional_tags:
+    Owner: "Application Team"
+    Purpose: "Application Workloads"
+    Environment: "Test"

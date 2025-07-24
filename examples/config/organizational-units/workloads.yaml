@@ -1,0 +1,23 @@
+# Workload Organizational Units
+# OUs for application and workload accounts
+
+Workloads_Prod:
+  lifecycle: prod
+  description: "Production workload and application accounts"
+  additional_tags:
+    Purpose: "Workloads"
+    Environment: "Production"
+
+Workloads_Test:
+  lifecycle: nonprod
+  description: "Development, testing, and staging workload accounts"
+  additional_tags:
+    Purpose: "Workloads"
+    Environment: "NonProduction"
+
+Sandbox:
+  lifecycle: nonprod
+  description: "Experimental and proof-of-concept accounts"
+  additional_tags:
+    Purpose: "Experimentation"
+    Environment: "Sandbox"
