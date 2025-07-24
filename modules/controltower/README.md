@@ -1,5 +1,353 @@
 
+# AWS Control Tower Module
+
+This Terraform module deploys and configures AWS Control Tower Landing Zone with enhanced security features. The module provides a secure, scalable foundation for multi-account AWS environments following AWS Security Reference Architecture (SRA) patterns.
+
+---
+
+## Features
+
+- **AWS Control Tower Landing Zone**: Automated deployment of Control Tower v3.3+
+- **Enhanced KMS Security**: Custom KMS keys with organizational boundaries and SSO integration
+- **Flexible Deployment**: Optional landing zone deployment with `deploy_landing_zone` flag
+- **Independent Operation**: Works standalone or integrated with other modules
+- **GovCloud Support**: Automatic detection and handling of AWS GovCloud partition differences
+- **SSO-Aware Security**: KMS policies integrate with IAM Identity Center role patterns
+
+---
+
+## Architecture
+
+This module creates and manages:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Control Tower Landing Zone              │
+├─────────────────────────────────────────────────────────────┤
+│ Management Account (Organization Root) │                   │
+│ ├─ AWS Control Tower Service            │  Security OU     │
+│ ├─ AWS Organizations                    │  ├─ Log Archive  │
+│ ├─ AWS SSO/Identity Center             │  ├─ Audit        │
+│ └─ Enhanced KMS Keys                    │  └─ Security     │
+│                                         │                  │
+│ Workloads OU                           │  Infrastructure   │
+│ ├─ Production Accounts                 │  ├─ Network       │
+│ ├─ Non-Production Accounts             │  ├─ Shared Svcs   │
+│ └─ Sandbox Accounts                    │  └─ Deployment    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Core Components Created
+
+1. **AWS Control Tower Landing Zone**
+   - Version 3.3+ with latest security baselines
+   - Automated account provisioning workflows
+   - Guardrails for governance and compliance
+   - Centralized logging and monitoring
+
+2. **Enhanced KMS Infrastructure**
+   - Organization-scoped KMS key for Control Tower resources
+   - SSO-aware key policies with precise role matching
+   - Management account restricted access patterns
+   - Automatic key rotation enabled
+
+3. **Security Boundaries**
+   - `aws:PrincipalOrgID` conditions for organizational isolation
+   - SSO role-based access patterns (`${project}-aws-admin`)
+   - Management account scope restrictions
+   - Cross-partition compatibility
+
+---
+
+## AWS SRA Compliance
+
+This module implements AWS Security Reference Architecture patterns:
+
+### Required Account Structure
+
+| Account Type | Purpose | OU Placement | Required |
+|--------------|---------|--------------|-----------|
+| **Management** | Organization management, billing, Control Tower | Root | ✅ Yes |
+| **Log Archive** | Centralized logging, CloudTrail, Config | Security | ✅ Yes |
+| **Audit** | Security audit, compliance monitoring | Security | ✅ Yes |
+
+### Security Guardrails
+
+- **Preventive Guardrails**: Block non-compliant actions
+- **Detective Guardrails**: Alert on suspicious activities  
+- **Proactive Guardrails**: Automatically remediate issues
+- **Data Residency**: Ensure data stays within approved regions
+
+---
+
+## Quick Start
+
+### Minimal Configuration
+
+```hcl
+module "controltower" {
+  source = "../modules/controltower"
+  
+  # Required: Core account IDs for Control Tower
+  management_account_id  = "123456789012"
+  log_archive_account_id = "234567890123"
+  audit_account_id       = "345678901234"
+  
+  # Optional: Control deployment
+  deploy_landing_zone = true
+  self_managed_sso    = true
+  
+  # Optional: Customization
+  project     = "myorg"
+  aws_region  = "us-west-2"
+  global_tags = {
+    Environment = "production"
+    Owner       = "platform-team"
+  }
+}
+```
+
+### Integration with Organizations Module
+
+```hcl
+module "organizations" {
+  source = "../modules/organizations"
+  
+  project                = "myorg"
+  aws_account_parameters = var.aws_account_parameters
+}
+
+module "controltower" {
+  source = "../modules/controltower"
+  
+  # Clean integration using organizations output
+  management_account_id  = module.organizations.management_account_id
+  log_archive_account_id = module.organizations.log_archive_account_id
+  audit_account_id       = module.organizations.audit_account_id
+  
+  project    = module.organizations.project
+  global_tags = module.organizations.global_tags
+}
+```
+
+---
+
+## Configuration Options
+
+### Landing Zone Control
+
+```hcl
+# Deploy new Control Tower Landing Zone
+deploy_landing_zone = true
+
+# Use existing Control Tower (management only)
+deploy_landing_zone = false
+```
+
+### SSO Integration
+
+```hcl
+# Let Control Tower manage SSO
+self_managed_sso = false
+
+# Manage SSO separately (with sso module)
+self_managed_sso = true
+```
+
+### KMS Security Enhancement
+
+The module automatically creates enhanced KMS keys with:
+
+- **Organizational Boundaries**: `aws:PrincipalOrgID` conditions
+- **SSO Role Integration**: Precise role matching patterns
+- **Management Account Scope**: Restricted to management account operations
+- **Automatic Rotation**: Enabled by default
+
+---
+
+## Integration Patterns
+
+### Pattern 1: Full Stack Deployment
+
+```hcl
+# Complete landing zone with all modules
+module "organizations" {
+  source = "../modules/organizations"
+  aws_account_parameters = var.aws_account_parameters
+}
+
+module "controltower" {
+  source = "../modules/controltower"
+  
+  management_account_id  = module.organizations.management_account_id
+  log_archive_account_id = module.organizations.log_archive_account_id
+  audit_account_id       = module.organizations.audit_account_id
+}
+
+module "sso" {
+  source = "../modules/sso"
+  
+  project                = module.organizations.project
+  account_id_map         = module.organizations.account_id_map
+  auto_detect_control_tower = true
+}
+```
+
+### Pattern 2: Control Tower Only
+
+```hcl
+# Deploy just Control Tower with hardcoded account IDs
+module "controltower" {
+  source = "../modules/controltower"
+  
+  management_account_id  = "123456789012"
+  log_archive_account_id = "234567890123" 
+  audit_account_id       = "345678901234"
+  
+  deploy_landing_zone = true
+}
+```
+
+### Pattern 3: External Data Sources
+
+```hcl
+# Use external data sources for account IDs
+data "aws_ssm_parameter" "account_ids" {
+  for_each = toset(["management", "log_archive", "audit"])
+  name     = "/company/aws/${each.key}-account-id"
+}
+
+module "controltower" {
+  source = "../modules/controltower"
+  
+  management_account_id  = data.aws_ssm_parameter.account_ids["management"].value
+  log_archive_account_id = data.aws_ssm_parameter.account_ids["log_archive"].value
+  audit_account_id       = data.aws_ssm_parameter.account_ids["audit"].value
+}
+```
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue**: `Invalid value for variable` - account ID validation
+```
+Error: Management account ID must be a 12-digit string.
+```
+**Solution**: Ensure account IDs are exactly 12 digits without spaces or dashes.
+
+**Issue**: Control Tower deployment timeout
+```
+Error: timeout while waiting for state to become 'SUCCEEDED'
+```
+**Solution**: Control Tower deployment can take 60+ minutes. Increase timeout or check AWS console for progress.
+
+**Issue**: KMS key policy conflicts
+```
+Error: AccessDenied when creating KMS key policy
+```
+**Solution**: Ensure you're running from the management account with appropriate permissions.
+
+### Prerequisites Checklist
+
+- [ ] Running from AWS management account
+- [ ] Organization created and configured
+- [ ] Required accounts (management, log archive, audit) exist
+- [ ] Accounts have correct AccountType tags (if using organizations module)
+- [ ] AWS CLI/Provider configured with appropriate permissions
+- [ ] No existing Control Tower deployment (unless `deploy_landing_zone = false`)
+
+### Validation Commands
+
+```bash
+# Verify account IDs are accessible
+aws sts get-caller-identity
+
+# Verify organization status
+aws organizations describe-organization
+
+# Check Control Tower service status
+aws controltower get-landing-zone --landing-zone-identifier <id>
+```
+
+---
+
+## Security Considerations
+
+### KMS Key Security
+
+The module creates KMS keys with enhanced security:
+
+- **Organizational Boundaries**: Keys only usable within your organization
+- **SSO Integration**: Precise role-based access patterns
+- **Management Account Restriction**: Control Tower operations scoped appropriately
+- **Audit Logging**: All key usage logged to CloudTrail
+
+### Network Security
+
+- **Regional Isolation**: Resources deployed in specified region only
+- **Cross-Partition Support**: Handles commercial vs GovCloud differences
+- **Service Integration**: Secure integration with AWS native services
+
+### Access Patterns
+
+- **Least Privilege**: Minimal required permissions for Control Tower operation
+- **Role-Based Access**: Integration with SSO role patterns
+- **Audit Trail**: Complete logging of all administrative actions
+
+---
+
+## Advanced Configuration
+
+### Custom KMS Key Policies
+
+```hcl
+# The module automatically creates secure KMS policies
+# No additional configuration needed for standard deployments
+```
+
+### Multi-Region Considerations
+
+```hcl
+# Control Tower is region-specific
+# Deploy in your primary governance region
+aws_region = "us-gov-west-1"  # GovCloud
+aws_region = "us-east-1"      # Commercial (recommended)
+```
+
+### Compliance Integration
+
+```hcl
+# Module integrates with compliance frameworks
+global_tags = {
+  Compliance    = "FedRAMP"
+  Classification = "CUI"
+  Environment   = "production"
+}
+```
+
+---
 
 ## Resources Created by Control Tower
 
-See the [Control Tower documentation](https://docs.aws.amazon.com/controltower/latest/userguide/shared-account-resources.html) for a list of resources created by Control Tower.
+**Note**: Control Tower creates numerous resources automatically. See the [official Control Tower documentation](https://docs.aws.amazon.com/controltower/latest/userguide/shared-account-resources.html) for a complete list.
+
+### Key Resources Include:
+
+- CloudFormation StackSets for account baselines
+- AWS Config rules and conformance packs
+- AWS CloudTrail organization trail
+- Amazon S3 buckets for logging and access logging
+- AWS Lambda functions for automation
+- IAM roles and policies for service integration
+- Amazon SNS topics for notifications
+- AWS Service Catalog portfolios for account vending
+
+### Module-Created Resources:
+
+- `aws_controltower_landing_zone` - Main Control Tower deployment
+- `aws_kms_key.control_tower` - Enhanced KMS key for encryption
+- `aws_kms_alias.control_tower` - Friendly alias for KMS key
+- `aws_kms_key_policy.control_tower` - Security-enhanced key policy

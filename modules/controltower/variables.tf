@@ -1,23 +1,26 @@
 variable "project" {
-  description = "Name of the project or application. Used for naming resources."
+  description = "Name of the project or application. Used for resource naming and tagging."
   type        = string
   default     = "demo"
-}
 
-variable "aws_region" {
-  type        = string
-  description = "The AWS region to deploy resources in. For AWS GovCloud, this is typically 'us-gov-west-1'."
-  default     = "us-gov-west-1"
+  validation {
+    condition     = can(regex("^[a-z0-9-]+$", var.project))
+    error_message = "Project name must contain only lowercase letters, numbers, and hyphens."
+  }
 }
 
 variable "global_tags" {
-  description = "A map of tags to add to all resources. These are merged with any resource-specific tags."
+  description = "Tags applied to all resources created by this module."
   type        = map(string)
   default = {
-    Project    = "demo"
-    Owner      = "stigian"
-    Repository = "https://github.com/stigian/terraform-aws-cspm"
+    ManagedBy = "terraform"
   }
+}
+
+variable "aws_region" {
+  description = "AWS region where resources will be created. Auto-detected from provider if not specified."
+  type        = string
+  default     = null
 }
 
 variable "deploy_landing_zone" {
