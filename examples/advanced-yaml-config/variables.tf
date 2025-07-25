@@ -13,11 +13,11 @@ variable "aws_organization_id" {
 variable "project" {
   description = "Name of the project or application. Used for resource naming and tagging."
   type        = string
-  default     = "demo"
+  default     = "CnScca"
 
   validation {
-    condition     = can(regex("^[a-z0-9-]+$", var.project))
-    error_message = "Project name must contain only lowercase letters, numbers, and hyphens."
+    condition     = can(regex("^[a-zA-Z0-9-]+$", var.project))
+    error_message = "Project name must contain only letters, numbers, and hyphens."
   }
 }
 
@@ -25,8 +25,7 @@ variable "global_tags" {
   description = "Tags applied to all resources created by this module."
   type        = map(string)
   default = {
-    CreatedBy  = "terraform"
-    Project    = "demo"
+    ManagedBy  = "opentofu"
     Owner      = "stigian"
     Repository = "https://github.com/stigian/terraform-aws-cspm"
   }

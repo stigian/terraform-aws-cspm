@@ -8,6 +8,38 @@ locals {
     var.entra_group_admin_object_ids
   ) : []
 
+  # Combine existing admin user (if provided) with new users to create
+  all_admin_users = var.initial_admin_users
+
+  # Create group memberships for both existing and new users
+  initial_admin_group_memberships = merge(
+    # Group memberships for existing admin user (if provided)
+    var.existing_admin_user_id != null ? {
+      "${var.existing_admin_user_id}-aws_admin" = {
+        user_id          = var.existing_admin_user_id
+        group_name       = "aws_admin"
+        is_existing_user = true
+      }
+    } : {},
+
+    # Group memberships for new users to create
+    {
+      for pair in flatten([
+        for user in local.all_admin_users : [
+          for group in(user.admin_level == "full" ?
+            ["aws_admin"] :
+            ["aws_cyber_sec_eng", "aws_sec_auditor"]
+            ) : {
+            user_name        = user.user_name
+            group_name       = group
+            user_data        = user
+            is_existing_user = false
+          }
+        ]
+      ]) : "${pair.user_name}-${pair.group_name}" => pair
+    }
+  )
+
   # This block defines which groups are assigned to each AWS SRA account type
   # Elements in each list must use the keys from local.aws_sso_groups
   # Each account type gets different groups based on its security and operational requirements per AWS SRA
@@ -56,21 +88,12 @@ locals {
       "aws_sys_admin",     # System administration
     ]
 
-    # Workload Accounts
-    workload_prod = [
-      "aws_power_user",    # Production workload management
-      "aws_cyber_sec_eng", # Security oversight for production
-      "aws_sec_auditor",   # Security monitoring
+    # Workload Accounts (covers both prod and nonprod with appropriate oversight)
+    workload = [
+      "aws_power_user",    # Workload management capabilities
+      "aws_cyber_sec_eng", # Security oversight for all workloads
+      "aws_sec_auditor",   # Security monitoring and auditing
       "aws_sys_admin",     # System administration
-    ]
-    workload_nonprod = [
-      "aws_power_user",    # Non-production workload management
-      "aws_cyber_sec_eng", # Security oversight
-      "aws_sys_admin",     # System administration
-    ]
-    workload_sandbox = [
-      "aws_power_user", # Sandbox development
-      "aws_sys_admin",  # System administration
     ]
 
     # Future Account Types (for expansion)
@@ -109,32 +132,32 @@ locals {
   # Each group creates both an IAM Identity Center permission set and (optionally) an Entra group
   aws_sso_groups = {
     aws_admin = {
-      display_name       = "${var.project}-aws-admin"
+      display_name       = "${var.project}-AwsAdmin"
       description        = "Administrator access provides full access to AWS services and resources."
       managed_policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AdministratorAccess"
     }
     aws_cyber_sec_eng = {
-      display_name       = "${var.project}-aws-cyber-sec-eng"
+      display_name       = "${var.project}-AwsCyberSecEng"
       description        = "Provides access for DoD Cyber Security Service Provider (CSSP)."
       managed_policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/PowerUserAccess" # TODO: build & replace policy
     }
     aws_net_admin = {
-      display_name       = "${var.project}-aws-network-admin"
+      display_name       = "${var.project}-AwsNetworkAdmin"
       description        = "Provides access for Networking connections such as for VPCs, route tables and Transit Gateways."
       managed_policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/job-function/NetworkAdministrator"
     }
     aws_power_user = {
-      display_name       = "${var.project}-aws-power-user"
+      display_name       = "${var.project}-AwsPowerUser"
       description        = "Provides additional permissions than a normal user to complete tasks."
       managed_policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/PowerUserAccess"
     }
     aws_sec_auditor = {
-      display_name       = "${var.project}-aws-sec-auditor"
+      display_name       = "${var.project}-AwsSecAuditor"
       description        = "Grants access to read security configuration metadata. It is useful for software that audits the configuration of an AWS account."
       managed_policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/SecurityAudit"
     }
     aws_sys_admin = {
-      display_name       = "${var.project}-aws-sys-admin"
+      display_name       = "${var.project}-AwsSysAdmin"
       description        = "Grants full access permissions necessary for resources required for application and development operations."
       managed_policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/job-function/SystemAdministrator"
     }
@@ -144,35 +167,35 @@ locals {
   # Only created when enable_entra_integration is true
   entra_security_groups = {
     entra_app_admin = {
-      display_name = "entra-app-admin"
+      display_name = "EntraAppAdmin"
       description  = "Application Administrator"
     }
     entra_auth_policy_admin = {
-      display_name = "entra-auth-policy-admin"
+      display_name = "EntraAuthPolicyAdmin"
       description  = "Authentication Policy Administrator"
     }
     entra_cond_access_admin = {
-      display_name = "entra-cond-access-admin"
+      display_name = "EntraCondAccessAdmin"
       description  = "Conditional Access Administrator"
     }
     entra_dir_reader = {
-      display_name = "entra-dir-reader"
+      display_name = "EntraDirReader"
       description  = "Directory Reader"
     }
     entra_global_admin = {
-      display_name = "entra-global-admin"
+      display_name = "EntraGlobalAdmin"
       description  = "Global Administrator"
     }
     entra_groups_admin = {
-      display_name = "entra-groups-admin"
+      display_name = "EntraGroupsAdmin"
       description  = "Groups Administrator"
     }
     entra_priv_role_admin = {
-      display_name = "entra-priv-role-admin"
+      display_name = "EntraPrivRoleAdmin"
       description  = "Privileged Role Administrator"
     }
     entra_sec_reader = {
-      display_name = "entra-sec-reader"
+      display_name = "EntraSecReader"
       description  = "Security Reader"
     }
   }

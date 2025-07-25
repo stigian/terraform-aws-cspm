@@ -1,7 +1,7 @@
 variable "project" {
   description = "Name of the project or application. Used for naming resources."
   type        = string
-  default     = "demo"
+  default     = "CnScca"
 }
 
 variable "aws_organization_id" {
@@ -51,8 +51,8 @@ variable "global_tags" {
   description = "A map of tags to add to all resources."
   type        = map(string)
   default = {
-    Project = "demo"
-    Owner   = "terraform"
+    ManagedBy = "opentofu"
+    Owner     = "terraform"
   }
 }
 

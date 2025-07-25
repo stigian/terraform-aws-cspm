@@ -1,11 +1,11 @@
 variable "project" {
   description = "Name of the project or application. Used for resource naming and tagging."
   type        = string
-  default     = "demo"
+  default     = "CnScca"
 
   validation {
-    condition     = can(regex("^[a-z0-9-]+$", var.project))
-    error_message = "Project name must contain only lowercase letters, numbers, and hyphens."
+    condition     = can(regex("^[a-zA-Z0-9-]+$", var.project))
+    error_message = "Project name must contain only letters, numbers, and hyphens."
   }
 }
 
@@ -13,7 +13,7 @@ variable "global_tags" {
   description = "Tags applied to all resources created by this module."
   type        = map(string)
   default = {
-    ManagedBy = "terraform"
+    ManagedBy = "opentofu"
   }
 }
 
@@ -59,30 +59,25 @@ variable "account_role_mapping" {
     - log_archive: Centralized logging and log storage (REQUIRED - AccountType = "log_archive")  
     - audit: Security audit and compliance (REQUIRED - AccountType = "audit")
     
-    **Optional Connectivity & Network Accounts:**
+    **SRA-Recommended Security OU Accounts:**
+    - security_tooling: Security tools, SIEM, and scanning infrastructure
+    
+    **SRA-Recommended Infrastructure OU Accounts:**
     - network: Central network connectivity (Transit Gateway, Direct Connect, etc.)
     - shared_services: Shared infrastructure services (DNS, monitoring, etc.)
     
-    **Optional Security Accounts:**
-    - security_tooling: Security tools and SIEM (often combined with audit)
-    - backup: Centralized backup and disaster recovery
+    **SRA-Recommended Workloads OU Accounts:**
+    - workload: Application workload accounts (organize by environment or application per SRA)
     
-    **Optional Workload Accounts:**
-    - workload_prod: Production workloads
-    - workload_nonprod: Non-production workloads (dev, test, staging)
-    - workload_sandbox: Experimental and sandbox environments
-    
-    **Future Account Types (for reference):**
-    - deployment: CI/CD and deployment tools
-    - data: Data lakes, analytics, and big data workloads
-    
-    Example (showing MINIMUM required for Control Tower):
+    Example (showing Control Tower + SRA recommended structure):
       {
-        "YourCorp-Management"       = "management"     # REQUIRED
-        "YourCorp-Security-Logs"    = "log_archive"    # REQUIRED  
-        "YourCorp-Security-Audit"   = "audit"          # REQUIRED
-        "YourCorp-Network-Hub"      = "network"        # Optional
-        "YourCorp-Workload-Prod1"   = "workload_prod"  # Optional
+        "YourCorp-Management"           = "management"        # REQUIRED - Root OU
+        "YourCorp-Security-LogArchive"  = "log_archive"       # REQUIRED - Security OU  
+        "YourCorp-Security-Audit"       = "audit"            # REQUIRED - Security OU
+        "YourCorp-Security-Tooling"     = "security_tooling" # Security OU
+        "YourCorp-Infrastructure-Network" = "network"        # Infrastructure OU
+        "YourCorp-Infrastructure-Shared"  = "shared_services" # Infrastructure OU
+        "YourCorp-Workload-App1-Prod"   = "workload"         # Workloads OU
       }
       
     NOTE: Account names must match exactly with account_id_map keys
@@ -92,27 +87,10 @@ variable "account_role_mapping" {
 
   validation {
     condition = alltrue([
-      for role in values(var.account_role_mapping) : contains([
-        # Core Foundation (Required by SRA)
-        "management",
-        "log_archive",
-        "audit",
-        # Connectivity & Network
-        "network",
-        "shared_services",
-        # Security
-        "security_tooling",
-        "backup",
-        # Workloads
-        "workload_prod",
-        "workload_nonprod",
-        "workload_sandbox",
-        # Future expansion
-        "deployment",
-        "data"
-      ], role)
+      for role in values(var.account_role_mapping) :
+      contains(keys(yamldecode(file("${path.module}/../../config/sra-account-types.yaml"))), role)
     ])
-    error_message = "Account roles must be valid AWS SRA account types. See variable description for supported types."
+    error_message = "Account roles must be valid SRA types. See config/sra-account-types.yaml for supported types."
   }
 }
 
@@ -222,5 +200,84 @@ variable "entra_group_admin_object_ids" {
   validation {
     condition     = var.enable_entra_integration == false || (var.enable_entra_integration == true && length(var.entra_group_admin_object_ids) >= 0)
     error_message = "entra_group_admin_object_ids must be provided when enable_entra_integration is true."
+  }
+}
+
+variable "existing_admin_user_id" {
+  description = <<-EOT
+    **RECOMMENDED**: User ID of an existing SSO user to grant admin access for Day 1 protection.
+    
+    If you already have an SSO user (e.g., your personal user), provide the User ID here
+    and that user will be automatically added to admin groups for all accounts.
+    
+    To find your User ID:
+    1. Go to AWS Console → IAM Identity Center → Users
+    2. Click on your username
+    3. Copy the "User ID" field (format: 1234567890-abcd-efgh-ijkl-123456789012)
+    
+    If this is provided, no new users will be created automatically.
+    If this is null/empty, you MUST provide initial_admin_users to prevent Day 1 lockout.
+  EOT
+  type        = string
+  default     = null
+}
+
+variable "initial_admin_users" {
+  description = <<-EOT
+    List of admin users to create in AWS IAM Identity Center.
+    
+    **REQUIRED** if existing_admin_user_id is not provided (to prevent Day 1 lockout).
+    **OPTIONAL** if existing_admin_user_id is provided (for additional users).
+    
+    Each user object should contain:
+    - user_name: Unique username for SSO login (e.g., "john.doe" or "admin")
+    - display_name: Human-readable display name (e.g., "John Doe")  
+    - email: Primary email address for the user
+    - given_name: First name
+    - family_name: Last name
+    - admin_level: Level of admin access ("full" or "security")
+      - "full": Gets aws_admin group (AdministratorAccess to all accounts)
+      - "security": Gets aws_cyber_sec_eng and aws_sec_auditor groups (security-focused access)
+    
+    Example:
+      [
+        {
+          user_name    = "john.doe"
+          display_name = "John Doe" 
+          email        = "john.doe@your-company.com"
+          given_name   = "John"
+          family_name  = "Doe"
+          admin_level  = "full"
+        }
+      ]
+  EOT
+  type = list(object({
+    user_name    = string
+    display_name = string
+    email        = string
+    given_name   = string
+    family_name  = string
+    admin_level  = string
+  }))
+  default = []
+
+  validation {
+    condition = alltrue([
+      for user in var.initial_admin_users : contains(["full", "security"], user.admin_level)
+    ])
+    error_message = "admin_level must be either 'full' or 'security'."
+  }
+
+  validation {
+    condition = alltrue([
+      for user in var.initial_admin_users : can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", user.email))
+    ])
+    error_message = "All email addresses must be valid email format."
+  }
+
+  # Ensure Day 1 protection: either existing user OR new users must be provided
+  validation {
+    condition     = var.existing_admin_user_id != null || length(var.initial_admin_users) > 0
+    error_message = "Either existing_admin_user_id must be provided OR initial_admin_users must contain at least one user to prevent Day 1 lockout."
   }
 }

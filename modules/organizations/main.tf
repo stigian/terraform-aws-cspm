@@ -3,9 +3,23 @@ data "aws_organizations_organization" "this" {}
 # Detect AWS partition to determine if we're running in GovCloud
 data "aws_partition" "current" {}
 
+# Load AWS Security Reference Architecture (SRA) Account Types from YAML
+# These match accreditation requirements and cannot be changed
+locals {
+  sra_account_types = yamldecode(file("${path.module}/../../config/sra-account-types.yaml"))
+
+  # Extract just the account type names for validation
+  valid_account_types = keys(local.sra_account_types)
+}
+
 # Process account parameters (no transformation needed since we use explicit ou/lifecycle)
 locals {
   processed_accounts = var.aws_account_parameters
+
+  # Add Project tag to global tags
+  global_tags = merge(var.global_tags, {
+    Project = var.project
+  })
 }
 
 resource "aws_organizations_organization" "this" {
@@ -36,8 +50,10 @@ resource "aws_organizations_organizational_unit" "this" {
   parent_id = data.aws_organizations_organization.this.roots[0].id
 
   tags = merge(
-    var.global_tags,
-    { Lifecycle = each.value.lifecycle },
+    local.global_tags,
+    {
+      Lifecycle = each.value.lifecycle
+    },
   )
 }
 
@@ -50,9 +66,12 @@ resource "aws_organizations_account" "commercial" {
   parent_id = each.value.ou != "Root" ? aws_organizations_organizational_unit.this[each.value.ou].id : data.aws_organizations_organization.this.roots[0].id
 
   tags = merge(
-    var.global_tags,
-    { Lifecycle = each.value.lifecycle },
-    each.value.tags
+    local.global_tags,
+    {
+      Lifecycle = each.value.lifecycle
+    },
+    # Add AccountType tag if account_type is specified
+    each.value.account_type != "" ? { AccountType = each.value.account_type } : {}
   )
 
   lifecycle {
@@ -69,9 +88,12 @@ resource "aws_organizations_account" "govcloud" {
   parent_id = each.value.ou != "Root" ? aws_organizations_organizational_unit.this[each.value.ou].id : data.aws_organizations_organization.this.roots[0].id
 
   tags = merge(
-    var.global_tags,
-    { Lifecycle = each.value.lifecycle },
-    each.value.tags
+    local.global_tags,
+    {
+      Lifecycle = each.value.lifecycle
+    },
+    # Add AccountType tag if account_type is specified
+    each.value.account_type != "" ? { AccountType = each.value.account_type } : {}
   )
 
   lifecycle {

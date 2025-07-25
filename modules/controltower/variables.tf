@@ -1,11 +1,11 @@
 variable "project" {
   description = "Name of the project or application. Used for resource naming and tagging."
   type        = string
-  default     = "demo"
+  default     = "CnScca"
 
   validation {
-    condition     = can(regex("^[a-z0-9-]+$", var.project))
-    error_message = "Project name must contain only lowercase letters, numbers, and hyphens."
+    condition     = can(regex("^[a-zA-Z0-9-]+$", var.project))
+    error_message = "Project name must contain only letters, numbers, and hyphens."
   }
 }
 
@@ -13,7 +13,7 @@ variable "global_tags" {
   description = "Tags applied to all resources created by this module."
   type        = map(string)
   default = {
-    ManagedBy = "terraform"
+    ManagedBy = "opentofu"
   }
 }
 
@@ -69,8 +69,24 @@ variable "self_managed_sso" {
   default     = true
 }
 
-variable "kms_key_admin_arns" {
+variable "additional_kms_key_admin_arns" {
+  description = <<-EOT
+    Optional list of additional IAM ARNs that will be granted KMS key administrative permissions.
+    
+    Use this to grant KMS admin access to specific users, roles, or external accounts beyond the default admins:
+    - Current Terraform caller
+    - SSO Administrator roles
+    - Project-specific admin roles
+    
+    Example: ["arn:aws-us-gov:iam::123456789012:user/admin", "arn:aws-us-gov:iam::123456789012:role/SecurityTeam"]
+  EOT
   type        = list(string)
-  description = "List of IAM ARNs that will be granted KMS key admin permissions."
   default     = []
+
+  validation {
+    condition = alltrue([
+      for arn in var.additional_kms_key_admin_arns : can(regex("^arn:aws(-us-gov)?:iam::[0-9]{12}:(user|role|root)/.+", arn))
+    ])
+    error_message = "All ARNs must be valid IAM ARNs in the format: arn:aws-us-gov:iam::account-id:user/username or arn:aws-us-gov:iam::account-id:role/rolename (or arn:aws: for commercial)"
+  }
 }

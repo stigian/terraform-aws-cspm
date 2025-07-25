@@ -2,6 +2,15 @@ data "aws_partition" "current" {}
 data "aws_caller_identity" "current" {}
 data "aws_organizations_organization" "current" {}
 
+# Load AWS Security Reference Architecture (SRA) Account Types from YAML
+# These match accreditation requirements and cannot be changed
+locals {
+  sra_account_types = yamldecode(file("${path.module}/../../config/sra-account-types.yaml"))
+
+  # Extract just the account type names for validation
+  valid_account_types = keys(local.sra_account_types)
+}
+
 locals {
   # Choose appropriate landing zone manifest template based on SSO management preference
   manifest_template = var.self_managed_sso ? "LandingZoneManifest-SelfManagedSSO.tpl.json" : "LandingZoneManifest.tpl.json"
@@ -11,6 +20,11 @@ locals {
     security_account_id = var.audit_account_id
     kms_key_arn         = aws_kms_key.control_tower.arn
   }) : null
+
+  # Add Project tag to global tags
+  global_tags = merge(var.global_tags, {
+    Project = var.project
+  })
 }
 
 resource "aws_controltower_landing_zone" "this" {
@@ -38,7 +52,7 @@ resource "aws_kms_key" "control_tower" {
   deletion_window_in_days = 7
   enable_key_rotation     = true
 
-  tags = merge(var.global_tags, {
+  tags = merge(local.global_tags, {
     Name = "control-tower-key"
   })
 }
@@ -71,13 +85,10 @@ resource "aws_kms_key_policy" "control_tower" {
         Sid    = "Allow Key Administrators and SSO Admin Roles"
         Effect = "Allow"
         Principal = {
-          AWS = flatten([
+          AWS = concat([
             data.aws_caller_identity.current.arn,
-            var.kms_key_admin_arns,
-            # Allow SSO-federated admin roles (only in management account for Control Tower security)
-            "arn:${data.aws_partition.current.partition}:iam::${var.management_account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_*Administrator*",
-            "arn:${data.aws_partition.current.partition}:iam::${var.management_account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_${var.project}-aws-admin_*"
-          ])
+            "arn:${data.aws_partition.current.partition}:iam::${var.management_account_id}:root"
+          ], var.additional_kms_key_admin_arns)
         }
         Action = [
           "kms:Create*",

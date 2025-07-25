@@ -68,7 +68,7 @@ module "controltower" {
 
   depends_on = [module.organizations]
 
-  # Account IDs from organizations module
+  # Clean integration - no string matching needed
   management_account_id  = module.organizations.management_account_id
   log_archive_account_id = module.organizations.log_archive_account_id
   audit_account_id       = module.organizations.audit_account_id
@@ -90,8 +90,9 @@ module "sso" {
   project     = module.config_data.project
   global_tags = module.config_data.global_tags
 
-  # Account integration
+  # Account integration - structured data available from organizations module
   account_id_map = module.organizations.account_id_map
+  # Future enhancement: Use module.organizations.accounts_by_type for automatic role mapping
 
   # Map account names to their roles for SSO group assignments
   # This could be enhanced to read from YAML in the future
