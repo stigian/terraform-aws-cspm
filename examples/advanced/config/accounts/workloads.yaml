@@ -1,0 +1,41 @@
+# Application Workload Accounts
+# Production and non-production application environments
+
+workload_prod_1:
+  account_id: "678901234567" # UPDATE: Your actual workload account ID
+  account_name: "YourOrg-Workload-App1-Prod" # UPDATE: Exact name from CLI creation
+  email: "aws-app1-prod@yourorg.com" # UPDATE: Exact email from CLI creation
+  account_type: workload # Application workload account
+  ou: Workloads_Prod # Production workloads OU
+  lifecycle: prod
+  additional_tags:
+    Owner: "Application Team"
+    Application: "App1"
+    Environment: "production"
+    CostCenter: "12345"
+
+workload_nonprod_1:
+  account_id: "789012345678" # UPDATE: Your actual workload account ID
+  account_name: "YourOrg-Workload-App1-NonProd" # UPDATE: Exact name from CLI creation
+  email: "aws-app1-nonprod@yourorg.com" # UPDATE: Exact email from CLI creation
+  account_type: workload # Application workload account
+  ou: Workloads_NonProd # Non-production workloads OU
+  lifecycle: nonprod
+  additional_tags:
+    Owner: "Application Team"
+    Application: "App1"
+    Environment: "nonprod"
+    CostCenter: "12345"
+
+sandbox_account:
+  account_id: "890123456789" # UPDATE: Your actual sandbox account ID
+  account_name: "YourOrg-Sandbox-Dev" # UPDATE: Exact name from CLI creation
+  email: "aws-sandbox@yourorg.com" # UPDATE: Exact email from CLI creation
+  account_type: sandbox # Sandbox/development account
+  ou: Sandbox # Sandbox OU
+  lifecycle: nonprod
+  additional_tags:
+    Owner: "Development Team"
+    Purpose: "Development and Experimentation"
+    Environment: "sandbox"
+    AutoShutdown: "enabled"

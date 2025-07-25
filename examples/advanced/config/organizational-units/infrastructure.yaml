@@ -1,0 +1,18 @@
+# Infrastructure Organizational Units
+# For network, shared services, and platform accounts
+
+Infrastructure_Prod:
+  lifecycle: prod
+  additional_tags:
+    Purpose: "Production infrastructure and shared services"
+    Owner: "Platform Team"
+    Environment: "production"
+    Criticality: "High"
+
+Infrastructure_NonProd:
+  lifecycle: nonprod
+  additional_tags:
+    Purpose: "Non-production infrastructure and shared services"
+    Owner: "Platform Team"
+    Environment: "nonprod"
+    Criticality: "Medium"
