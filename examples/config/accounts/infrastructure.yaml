@@ -1,14 +1,16 @@
 # Network and Infrastructure Accounts
-# Accounts for shared networking and infrastructure services
+# See: /docs/account-management-guide.md for detailed instructions
 
 network_account:
   account_id: "261500508709"
   account_name: "nmmes-zt-test-transit"
   email: "nmmes-zt-test-transit@stigian.com"
   account_type: network # Maps to AccountType tag
-  ou: Infrastructure_Test # Network connectivity infrastructure
-  lifecycle: test
+  ou: Infrastructure_NonProd # Network connectivity infrastructure
+  lifecycle: nonprod
   additional_tags:
     Owner: "Network Team"
     Purpose: "Transit Gateway & Network Hub"
     Environment: "Test"
+# Add more infrastructure accounts here (shared services, network, etc.)
+# Choose OU: Infrastructure_Prod (prod) or Infrastructure_NonProd (nonprod)

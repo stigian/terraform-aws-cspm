@@ -8,8 +8,8 @@ provider "aws" {
 data "aws_partition" "current" {}
 
 # Load configuration from YAML files
-module "config_data" {
-  source = "../../modules/config-data"
+module "yaml_transform" {
+  source = "../../modules/yaml-transform"
 
   config_directory = "${path.module}/config"
   project          = var.project
@@ -25,14 +25,14 @@ import {
 
 # Import existing accounts - GovCloud partition
 import {
-  for_each = data.aws_partition.current.partition == "aws-us-gov" ? module.config_data.aws_account_parameters : {}
+  for_each = data.aws_partition.current.partition == "aws-us-gov" ? module.yaml_transform.aws_account_parameters : {}
   to       = module.organizations.aws_organizations_account.govcloud[each.key]
   id       = each.key
 }
 
 # Import existing accounts - Commercial partition
 import {
-  for_each = data.aws_partition.current.partition != "aws-us-gov" ? module.config_data.aws_account_parameters : {}
+  for_each = data.aws_partition.current.partition != "aws-us-gov" ? module.yaml_transform.aws_account_parameters : {}
   to       = module.organizations.aws_organizations_account.commercial[each.key]
   id       = each.key
 }
@@ -42,13 +42,13 @@ module "organizations" {
   source = "../../modules/organizations"
 
   # Configuration from YAML
-  project     = module.config_data.project
-  global_tags = module.config_data.global_tags
+  project     = module.yaml_transform.project
+  global_tags = module.yaml_transform.global_tags
 
   # Organization settings
   aws_organization_id    = var.aws_organization_id
-  aws_account_parameters = module.config_data.aws_account_parameters
-  organizational_units   = module.config_data.organizational_units
+  aws_account_parameters = module.yaml_transform.aws_account_parameters
+  organizational_units   = module.yaml_transform.organizational_units
 
   # Control Tower integration
   control_tower_enabled = true
@@ -60,32 +60,32 @@ module "controltower" {
   depends_on = [module.organizations]
 
   # Configuration consistency
-  project     = module.organizations.project
-  global_tags = module.organizations.global_tags
+  project     = module.yaml_transform.project
+  global_tags = module.yaml_transform.global_tags
   aws_region  = var.aws_region
 
-  # Account IDs from organizations module
-  management_account_id  = module.organizations.management_account_id
-  log_archive_account_id = module.organizations.log_archive_account_id
-  audit_account_id       = module.organizations.audit_account_id
+  # Account IDs from yaml_transform module (enhanced data transformation)
+  management_account_id  = module.yaml_transform.management_account_id
+  log_archive_account_id = module.yaml_transform.log_archive_account_id
+  audit_account_id       = module.yaml_transform.audit_account_id
 
   # Control Tower settings
   deploy_landing_zone = var.deploy_landing_zone
   self_managed_sso    = var.self_managed_sso
 }
 
-# SSO Module - IAM Identity Center configuration with YAML-driven groups
+# SSO Module - IAM Identity Center configuration with compliance-standardized groups
 module "sso" {
   source     = "../../modules/sso"
   depends_on = [module.controltower]
 
   # Configuration consistency
-  project     = module.organizations.project
-  global_tags = module.organizations.global_tags
+  project     = module.yaml_transform.project
+  global_tags = module.yaml_transform.global_tags
 
-  # Account integration
-  account_id_map       = module.organizations.account_id_map
-  account_role_mapping = module.organizations.account_role_mapping
+  # Account integration from yaml_transform module (enhanced data transformation)
+  account_id_map       = module.yaml_transform.account_id_map
+  account_role_mapping = module.yaml_transform.account_role_mapping
 
   # SSO Configuration - Uses compliance-standardized groups and permission sets
   enable_sso_management     = var.enable_sso_management

@@ -8,7 +8,7 @@ Workloads_Prod:
     Purpose: "Workloads"
     Environment: "Production"
 
-Workloads_Test:
+Workloads_NonProd:
   lifecycle: nonprod
   description: "Development, testing, and staging workload accounts"
   additional_tags:

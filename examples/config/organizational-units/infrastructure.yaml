@@ -8,7 +8,7 @@ Infrastructure_Prod:
     Purpose: "Infrastructure"
     Environment: "Production"
 
-Infrastructure_Test:
+Infrastructure_NonProd:
   lifecycle: nonprod
   description: "Non-production infrastructure accounts"
   additional_tags:

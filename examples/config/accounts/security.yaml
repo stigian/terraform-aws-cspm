@@ -1,12 +1,12 @@
-# Security Foundational Accounts
-# Required by AWS Control Tower for security and compliance
+# Security Control Accounts
+# See: /docs/account-management-guide.md for detailed instructions
 
 log_archive_account:
   account_id: "261503748007"
   account_name: "nmmes-zt-test-logging"
   email: "nmmes-zt-test-logging@stigian.com"
   account_type: log_archive # Maps to AccountType tag
-  ou: Security # Required: Must be in Security OU
+  ou: Security # Centralized logging
   lifecycle: prod
   additional_tags:
     Owner: "Security Team"
@@ -18,9 +18,11 @@ audit_account:
   account_name: "nmmes-zt-test-auth"
   email: "nmmes-zt-test-auth@stigian.com"
   account_type: audit # Maps to AccountType tag
-  ou: Security # Required: Must be in Security OU
+  ou: Security # Audit and compliance
   lifecycle: prod
   additional_tags:
     Owner: "Security Team"
     Purpose: "Security Audit & Compliance"
     Compliance: "Required"
+# Add more security accounts here (SIEM, security tools, etc.)
+# All security accounts use Security OU with prod lifecycle

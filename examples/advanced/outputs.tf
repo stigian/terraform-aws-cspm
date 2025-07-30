@@ -47,8 +47,8 @@ output "control_tower_detected" {
 output "yaml_configuration_summary" {
   description = "Summary of configuration loaded from YAML files"
   value = {
-    accounts_configured  = length(module.config_data.aws_account_parameters)
-    organizational_units = keys(module.config_data.organizational_units)
-    project              = module.config_data.project
+    accounts_configured  = length(module.yaml_transform.aws_account_parameters)
+    organizational_units = keys(module.yaml_transform.organizational_units)
+    project              = module.yaml_transform.project
   }
 }

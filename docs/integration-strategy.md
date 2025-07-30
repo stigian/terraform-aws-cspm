@@ -339,3 +339,62 @@ The landing zone manifest file gives you **complete control** over what Control 
 3. **Incremental Enhancement**: Add value without replacing CT
 4. **Future-Proof**: Can migrate to/from CT without complete rewrites
 5. **Compliance Ready**: CT handles baseline, you add specific requirements
+
+## Module Architecture Overview
+
+The CSPM module implements a layered architecture with clear separation of concerns:
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Organizations │────│  Control Tower   │────│      SSO        │
+│                 │    │                  │    │                 │
+│ • Account Mgmt  │    │ • Landing Zone   │    │ • Access Mgmt   │
+│ • OU Structure  │    │ • Guardrails     │    │ • Permission    │
+│ • SRA Compliance│    │ • Baseline       │    │   Sets          │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                                 │
+                    ┌─────────────────────┐
+                    │ Security Services  │
+                    │                    │
+                    │ • GuardDuty        │
+                    │ • Security Hub     │
+                    │ • Inspector2       │
+                    │ • Detective        │
+                    │ • Config           │
+                    └─────────────────────┘
+```
+
+### Key Architecture Features
+
+- **DISA SCCA Compliance**: Implements cloud-native SCCA patterns
+- **AWS SRA Integration**: Follows AWS Security Reference Architecture
+- **Multi-Partition Support**: Works with both Commercial AWS and GovCloud
+- **Zero Trust Ready**: Designed for DoD Zero Trust implementation
+- **Modular Design**: Clean separation of concerns between modules
+- **Account Import**: Manages existing accounts without recreation
+
+### Account Organization Patterns
+
+#### Required Account Types
+- **management**: AWS Organization management account (Root OU)
+- **log_archive**: Central logging account (Security OU)
+- **audit**: Security audit account (Security OU)
+
+#### Standard OUs (AWS SRA)
+- **Security**: Security and compliance accounts
+- **Infrastructure_Prod/NonProd**: Network and shared services
+- **Workloads_Prod/NonProd**: Application workloads
+- **Sandbox**: Development and experimentation
+- **Policy_Staging**: Policy testing
+- **Suspended**: Decommissioned accounts
+
+#### Account Naming Convention
+```
+{Organization}-{Function}-{Environment}
+Examples:
+- "ACME-Management"
+- "ACME-Security-Audit" 
+- "ACME-Workload-App1-Prod"
+```
