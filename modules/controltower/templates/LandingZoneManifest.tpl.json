@@ -28,6 +28,7 @@
     "accountId": "${security_account_id}"
   },
   "accessManagement": {
-    "enabled": true
+    "enabled": ${access_management_enabled
+    }
   }
 }
