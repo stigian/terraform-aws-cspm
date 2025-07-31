@@ -1,6 +1,38 @@
-# Security Features Guide
+# Security Features Guide (Legacy)
 
-This guide outlines the security features and controls implemented in the terraform-aws-cspm module for DoD Zero Trust CSPM compliance.
+**⚠️ This document has been superseded by the new documentation structure.**
+
+## New Documentation Location
+
+This guide has been reorganized into more focused documents:
+
+### 📖 Main Security Reference
+**[Security Overview](./security-overview.md)** - Complete security architecture guide with current implementation status and monitoring procedures.
+
+### 🛡️ AWS Best Practices
+**[AWS SRA Compliance](./aws-sra-compliance.md)** - Detailed AWS Security Reference Architecture compliance documentation.
+
+### 🗂️ Service-Specific Security
+For detailed security implementation by service:
+- **[GuardDuty Security Implementation](./by_service/guardduty/sra-compliance.md)**
+- **[Control Tower Security Controls](./by_service/control_tower/README.md)**
+- **[Organizations Security Model](./by_service/organizations/README.md)**
+- **[SSO Security Implementation](./by_service/sso/README.md)**
+
+### 🚀 Role-Based Security Guides
+- **[Security Overview](./security-overview.md)** - For security teams
+- **[Administration Overview](./administration-overview.md#security-considerations)** - For administrators
+- **[Operations Overview](./operations-overview.md#security-operations)** - For operations teams
+
+---
+
+## Legacy Content Below
+
+*The content below is maintained for reference but may be outdated. Please use the new documentation structure above.*
+
+This guide outlines the security features and controls implemented in the terraform-aws-cspm module for DoD Zero Trust CSMP compliance.
+
+> **📋 AWS SRA Compliance**: This implementation follows [AWS Security Reference Architecture](aws-sra-compliance.md) best practices and is fully compliant with AWS prescriptive guidance for enterprise security.
 
 ---
 
@@ -10,9 +42,19 @@ The module implements a **cloud-native DISA SCCA (Secure Cloud Computing Archite
 
 ### Key Security Principles
 - **Zero Trust**: Least privilege access with continuous verification
-- **Defense in Depth**: Multiple layers of security controls
+- **Defense in Depth**: Multiple layers of security controls  
+- **AWS SRA Compliance**: Follows AWS Security Reference Architecture best practices
 - **Compliance First**: DISA SCCA compliance with automated guardrails
 - **Centralized Monitoring**: Unified security posture management
+
+### SRA-Compliant Architecture
+Our implementation aligns with AWS SRA design patterns:
+- **Delegated Administrator Model**: Audit account manages all security services
+- **Organization-wide Security Services**: GuardDuty, Security Hub, Config, Inspector
+- **Hybrid Control Tower + Organizations**: Balanced governance and flexibility
+- **Six-Layer Security Model**: Organization → OU → Account → Network → Principal → Resource
+
+📖 **See**: [AWS SRA Compliance Documentation](aws-sra-compliance.md) for detailed alignment analysis.
 
 ---
 

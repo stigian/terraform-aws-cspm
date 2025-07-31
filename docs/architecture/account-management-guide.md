@@ -71,7 +71,7 @@ aws organizations create-gov-cloud-account \
 ```yaml
 # Step 2: Add to config/accounts/workloads.yaml
 customer_portal_production:
-  account_id: "345678901234"  # From CLI above
+  account_id: "ACCOUNT_ID_FROM_CLI"  # From CLI above
   account_name: "CustomerPortal-Production"  # Must match CLI exactly
   email: "customer-portal-prod@yourorg.com"  # Must match CLI exactly
   account_type: workload
@@ -95,7 +95,7 @@ tofu apply     # Deploy if plan looks good
 ```yaml
 # Add new entry with unique key
 shared_services_prod:
-  account_id: "234567890123"
+  account_id: "ACCOUNT_ID_FROM_CLI"
   account_name: "SharedServices-Production"
   email: "shared-services-prod@yourorg.com"
   account_type: shared_services
@@ -294,7 +294,7 @@ tofu plan
 ```hcl
 # terraform.tfvars
 aws_account_parameters = {
-  "227234344980" = {
+  "ACCOUNT_ID_FROM_CLI" = {
     name = "SCCA Root"
     email = "nmmes-scca-test-org-root@stigian.com"
     ou = "Root"
@@ -308,7 +308,7 @@ aws_account_parameters = {
 ```yaml
 # config/accounts/foundation.yaml
 management_account:
-  account_id: "227234344980"
+  account_id: "ACCOUNT_ID_FROM_CLI"
   account_name: "SCCA Root"
   email: "nmmes-scca-test-org-root@stigian.com"
   account_type: management

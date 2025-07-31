@@ -1,191 +1,114 @@
 # terraform-aws-cspm Documentation
 
-**DoD Zero Trust CSPM (Cloud Security Posture Management)** for AWS - Complete documentation hub for administrators, operators, and security teams.
+**DoD Zero Trust CSPM (Cloud Security Posture Management)** for AWS - Complete documentation organized by role and technical implementation.
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
-**New to the module?** Start here:
+**New to the module?** Start with your role:
 
-1. **[Main README](../README.md)** - Project overview and quick setup
-2. **[Account Management Guide](./account-management-guide.md)** - Essential account creation workflows
-3. **[Extending OUs and Lifecycles](./extending-ous-and-lifecycles.md)** - Customization guide
-
----
-
-## 👨‍💼 For Administrators
-
-### Initial Setup & Deployment
-| Document | Purpose | Audience |
-|----------|---------|----------|
-| **[Account Management Guide](./account-management-guide.md)** | Account creation workflows, CLI procedures | Admins |
-| **[Control Tower Integration](./control-tower-integration.md)** | Landing zone deployment, OU management | Admins |
-| **[Integration Strategy](./integration-strategy.md)** | Multi-account patterns, provider setup | Admins |
-
-### Configuration & Customization
-| Document | Purpose | Audience |
-|----------|---------|----------|
-| **[Extending OUs and Lifecycles](./extending-ous-and-lifecycles.md)** | ⭐ Adding new OUs, custom environments | Admins |
-| **[Multi-Account Provider Patterns](./MULTI_ACCOUNT_PROVIDER_PATTERNS.md)** | Advanced provider management | Admins |
-| **[State Management Strategy](./state-management-strategy.md)** | Terraform state organization | Admins |
+1. **[Administrator Guide](./by_persona/administrator.md)** - Complete setup, deployment, and configuration guide
+2. **[Operations Guide](./by_persona/operations.md)** - Daily operations, monitoring, and maintenance procedures  
+3. **[Security Team Guide](./by_persona/security-team.md)** - Security architecture, monitoring, and incident response
+4. **[AWS SRA Compliance](./architecture/aws-sra-compliance.md)** - AWS Security Reference Architecture alignment
 
 ---
 
-## 🔧 For Operations Teams
+## Documentation by Role
 
-### Daily Operations & Maintenance
-| Document | Purpose | When to Use |
-|----------|---------|-------------|
-| **[Operations Guide](./operations-guide.md)** | 🔧 Daily tasks, maintenance procedures | Daily operations |
-| **[Control Tower Troubleshooting](./control-tower-troubleshooting.md)** | ⚠️ Pre-deployment checks, error resolution | Before CT deployments |
-| **Module READMEs** ([Orgs](../modules/organizations/README.md), [SSO](../modules/sso/README.md), [CT](../modules/controltower/README.md)) | Module-specific operations | Daily operations |
+### Administrators
+**[Complete Administrator Guide](./by_persona/administrator.md)**
 
-### Daily Operations
-| Task | Documentation | Notes |
-|------|---------------|-------|
-| **Add new accounts** | [Operations Guide](./operations-guide.md) → Account Management | CLI-first workflow |
-| **Add new OUs** | [Operations Guide](./operations-guide.md) → OU Management | No code changes needed |
-| **SSO user management** | [Operations Guide](./operations-guide.md) → SSO Operations | Identity Center integration |
-| **Troubleshoot CT issues** | [Control Tower Troubleshooting](./control-tower-troubleshooting.md) | Critical for re-deployments |
-| **Monitor compliance** | [Operations Guide](./operations-guide.md) → Security Operations | Config/Security Hub |
+Everything administrators need to deploy and manage the infrastructure:
+- CLI-First Account Creation - Required workflow and validation
+- Deployment Sequence - Step-by-step foundation deployment
+- Configuration Management - Variables, validation, and best practices
+- Provider Configuration - Multi-account access patterns
+- Architecture Understanding - Hybrid Control Tower + Organizations design
+- Troubleshooting - Common issues and diagnostic procedures
 
----
+### Operations Teams  
+**[Complete Operations Guide](./by_persona/operations.md)**
 
-## 🛡️ For Security Teams
+Daily operations and maintenance procedures:
+- Account Management - Adding accounts and OUs, lifecycle management
+- Security Operations - Daily monitoring, incident response, compliance checks
+- Access Management - SSO operations, cross-account access, user management
+- Infrastructure Operations - Service health, monitoring, emergency procedures
+- Maintenance Schedules - Daily, weekly, monthly, and quarterly tasks
 
-### Security Architecture & Features
-| Document | Purpose | Focus Area |
-|----------|---------|------------|
-| **[Security Features Guide](./security-features-guide.md)** | 🛡️ Complete security controls overview | Security architecture |
-| **[Integration Strategy](./integration-strategy.md)** | DISA SCCA compliance patterns | Architecture |
-| **[Control Tower Integration](./control-tower-integration.md)** | Guardrails and compliance | Governance |
-| **[Multi-Account Provider Patterns](./MULTI_ACCOUNT_PROVIDER_PATTERNS.md)** | Cross-account security | Access patterns |
+### Security Teams
+**[Complete Security Guide](./by_persona/security-team.md)**
 
-### Security Implementation
-- **🔐 DISA SCCA Compliance**: Cloud-native implementation with AWS SRA fallback
-- **🏛️ Zero Trust Architecture**: Cross-account security services with least privilege  
-- **📊 Centralized Compliance**: Control Tower guardrails with Config/Security Hub integration
-- **🔑 IAM Identity Center**: Centralized access control with role-based permissions
-- **🚨 Threat Detection**: GuardDuty, Inspector, Detective for comprehensive monitoring
-- **📋 Continuous Compliance**: Automated Config rules with Security Hub aggregation
+Security architecture and monitoring procedures:
+- Security Architecture - DoD Zero Trust CSPM, AWS SRA compliance, service architecture
+- Security Operations - Daily monitoring, threat analysis, compliance reporting
+- Incident Response - Classification, workflows, investigation tools, evidence collection
+- Compliance & Auditing - DISA SCCA, AWS SRA, security controls validation
+- Security Configuration - Baseline configurations, monitoring, and alerting
 
 ---
 
-## 📚 Reference Documentation
+## Technical Implementation
 
-### Configuration Files
+### Module Documentation
+Each service module contains detailed technical implementation documentation:
+
+| Module | Status | Technical Documentation |
+|--------|--------|------------------------|
+| **[Organizations](../modules/organizations/)** | Production | Account management, OU structure, validation |
+| **[Control Tower](../modules/controltower/)** | Production | Landing zone, guardrails, troubleshooting |
+| **[SSO](../modules/sso/)** | Production | Identity management, permission sets, cross-account access |
+| **[GuardDuty](../modules/guardduty/)** | Production | Threat detection, provider patterns, organization configuration |
+| **[Security Hub](../modules/securityhub/)** | Planned | Central dashboard, compliance standards, integration |
+| **[Detective](../modules/detective/)** | Planned | Investigation tools, behavioral analysis, evidence collection |
+| **[Inspector](../modules/inspector2/)** | Planned | Vulnerability assessment, continuous monitoring |
+| **[Config](../modules/awsconfig/)** | Planned | Configuration compliance, drift detection, remediation |
+
+### Architecture References
+- **[Integration Strategy](./architecture/integration-strategy.md)** - Control Tower integration patterns and flexibility
+- **[Multi-Account Provider Patterns](./architecture/MULTI_ACCOUNT_PROVIDER_PATTERNS.md)** - Advanced provider management
+- **[Extending OUs and Lifecycles](./architecture/extending-ous-and-lifecycles.md)** - Customization and extension patterns
+- **[State Management Strategy](./architecture/state-management-strategy.md)** - Terraform state organization for multi-module deployments
+- **[Account Management Guide](./architecture/account-management-guide.md)** - YAML configuration patterns and CLI workflows
+
+---
+
+## Reference Documentation
+
+### AWS Best Practices
+- **[AWS SRA Compliance](./architecture/aws-sra-compliance.md)** - Complete AWS Security Reference Architecture alignment
+
+### Configuration Reference
 | File | Purpose | Location |
 |------|---------|----------|
 | **Account Schema** | Parameter validation rules | `config/account-schema.yaml` |
 | **SRA Account Types** | Valid account type values | `config/sra-account-types.yaml` |
 | **Live Configuration** | Deployment parameters | `examples/terraform.tfvars` |
 
-### Module Documentation
-| Module | Purpose | README |
-|--------|---------|--------|
-| **Organizations** | AWS Organizations management | [README](../modules/organizations/README.md) |
-| **SSO** | IAM Identity Center integration | [README](../modules/sso/README.md) |
-| **Control Tower** | Landing zone deployment | [README](../modules/controltower/README.md) |
-| **YAML Transform** | Config file processing | [README](../modules/yaml-transform/README.md) |
+---
 
-### Examples & Templates
-| Example | Purpose | Location |
-|---------|---------|----------|
-| **Basic Deployment** | Standard CSPM setup | `examples/` |
-| **YAML Configuration** | File-driven config | `examples/advanced-yaml-config/` |
-| **Live Environment** | Production patterns | `examples/terraform.tfvars` |
+## Quick Navigation
+
+### By Task
+- **Deploy infrastructure**: [Administrator Guide](./by_persona/administrator.md#initial-deployment)
+- **Add new account**: [Operations Guide](./by_persona/operations.md#account-management)
+- **Monitor security**: [Security Guide](./by_persona/security-team.md#security-operations)
+- **Troubleshoot issues**: Role-specific troubleshooting in each persona guide
+
+### By Service
+- **GuardDuty operations**: [Module docs](../modules/guardduty/docs/) + [Security monitoring](./by_persona/security-team.md#security-operations)
+- **Control Tower issues**: [Module docs](../modules/controltower/docs/) + [Emergency procedures](./by_persona/operations.md#emergency-procedures)
+- **SSO management**: [Module docs](../modules/sso/docs/) + [Access management](./by_persona/operations.md#access-management)
+
+### By Architecture
+- **Account structure**: [AWS SRA Compliance](./architecture/aws-sra-compliance.md#account-structure--ou-design)
+- **Security services**: [Security Guide](./by_persona/security-team.md#security-service-architecture)
+- **Hybrid design**: [Administrator Guide](./by_persona/administrator.md#architecture-understanding)
 
 ---
 
-## 🔍 Quick Lookup
+**Tip**: Start with your role-specific guide, then dive into technical module documentation as needed.
 
-### Common Questions
-| Question | Answer |
-|----------|--------|
-| **How do I add a new OU?** | [Operations Guide](./operations-guide.md) → OU Management |
-| **Control Tower deployment failed?** | [Troubleshooting Guide](./control-tower-troubleshooting.md) |
-| **Need to create new accounts?** | [Operations Guide](./operations-guide.md) → Account Management |
-| **SSO configuration issues?** | [Operations Guide](./operations-guide.md) → SSO Operations |
-| **Architecture questions?** | [Integration Strategy](./integration-strategy.md) |
-| **Daily maintenance tasks?** | [Operations Guide](./operations-guide.md) |
-
-### Emergency Procedures
-| Issue | Solution | Documentation |
-|-------|---------|---------------|
-| **Control Tower stuck** | CLI cleanup procedures | [CT Troubleshooting](./control-tower-troubleshooting.md) |
-| **Account placement errors** | Validation and placement rules | [Account Management](./account-management-guide.md) |
-| **Provider authentication** | Cross-account role setup | [Provider Patterns](./MULTI_ACCOUNT_PROVIDER_PATTERNS.md) |
-
----
-
-## 🏗️ Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    DISA SCCA Implementation                 │
-├─────────────────────────────────────────────────────────────┤
-│ Management Account                  │ Security OU           │
-│ ├─ AWS Organizations               │ ├─ Log Archive         │
-│ ├─ Control Tower                   │ ├─ Audit              │
-│ ├─ IAM Identity Center             │ └─ Security            │
-│ └─ Cross-account Security          │                       │
-│                                    │ Infrastructure OU     │
-│ Workloads OU                      │ ├─ Network            │
-│ ├─ Production Accounts            │ ├─ Shared Services    │
-│ ├─ Non-Production Accounts        │ └─ Deployment         │
-│ └─ Sandbox Accounts               │                       │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Key Principles:**
-- **DISA SCCA Primary**: Cloud-native interpretation of DoD requirements
-- **AWS SRA Fallback**: When SCCA documentation is insufficient
-- **Zero Trust**: Least privilege with cross-account security services
-- **Compliance First**: Control Tower guardrails with automated remediation
-
----
-
-## 📝 Contributing to Documentation
-
-### Documentation Standards
-When adding new documentation:
-
-1. **File Naming**: Use kebab-case (e.g., `control-tower-troubleshooting.md`)
-2. **Categories**: Choose appropriate category in this index
-3. **Cross-References**: Update related documents and this index
-4. **Audience**: Clearly identify target audience (Admin/Ops/Security)
-5. **Examples**: Include practical examples and commands
-
-### Content Guidelines
-- **Start with purpose**: What problem does this solve?
-- **Include prerequisites**: What must be done first?
-- **Provide examples**: Show real configuration/commands
-- **Document decisions**: Explain architectural choices
-- **Update timestamps**: Keep maintenance dates current
-
-### Review Process
-- Test all commands and examples
-- Verify cross-references work
-- Update this index when adding new docs
-- Consider impact on related modules
-
----
-
-## 🎯 Document Maintenance
-
-| Document | Last Updated | Review Frequency | Owner |
-|----------|--------------|------------------|--------|
-| **Documentation Index** | July 2025 | Monthly | Platform Team |
-| **Operations Guide** | July 2025 | Monthly | Operations Team |
-| **Security Features Guide** | July 2025 | Quarterly | Security Team |
-| **Control Tower Troubleshooting** | July 2025 | Before each CT deployment | Platform Team |
-| **Account Management Guide** | Current | Quarterly | Operations Team |
-| **Extending OUs Guide** | Current | As needed | Platform Team |
-| **Integration Strategy** | Current | Semi-annually | Architecture Team |
-
-**Next Review**: August 2025
-
----
-
-*For questions, improvements, or additions to this documentation, please create an issue or pull request.*
+*Last updated: July 31, 2025*

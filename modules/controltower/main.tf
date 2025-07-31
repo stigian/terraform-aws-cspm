@@ -14,6 +14,10 @@ locals {
 ###############################################################################
 # Control Tower Service Roles
 #
+# IMPORTANT: If you previously had Control Tower deployed and decommissioned it,
+# review the troubleshooting guide before deployment:
+# docs/control-tower-troubleshooting.md
+#
 # These roles are required before Control Tower landing zone can be created
 # https://docs.aws.amazon.com/controltower/latest/userguide/lz-api-prereques.html
 # https://docs.aws.amazon.com/controltower/latest/userguide/access-control-managing-permissions.html
@@ -62,7 +66,7 @@ resource "aws_iam_role_policy_attachment" "controltower_admin" {
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWSControlTowerServiceRolePolicy"
 }
 
-resource "aws_iam_role" "controltower_cloudformation" {
+resource "aws_iam_role" "controltower_cloudtrail" {
   name = "AWSControlTowerCloudTrailRole"
   path = "/service-role/"
 
@@ -84,9 +88,9 @@ resource "aws_iam_role" "controltower_cloudformation" {
   })
 }
 
-resource "aws_iam_role_policy" "controltower_cloudformation" {
+resource "aws_iam_role_policy" "controltower_cloudtrail" {
   name = "AWSControlTowerCloudTrailRolePolicy"
-  role = aws_iam_role.controltower_cloudformation.id
+  role = aws_iam_role.controltower_cloudtrail.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -175,71 +179,6 @@ resource "aws_iam_role_policy_attachment" "controltower_config_organizations" {
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWSConfigRoleForOrganizations"
 }
 
-###############################################################################
-# AWSControlTowerExecution Roles for Member Accounts
-#
-# These roles are required in log archive and audit accounts before Control Tower
-# can bootstrap the landing zone infrastructure in those accounts
-# https://docs.aws.amazon.com/controltower/latest/userguide/roles-how.html
-###############################################################################
-
-# AWSControlTowerExecution role in log archive account
-resource "aws_iam_role" "execution_role_log_archive" {
-  provider = aws.log_archive
-  name     = "AWSControlTowerExecution"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:${data.aws_partition.current.partition}:iam::${var.management_account_id}:root"
-        }
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-
-  tags = merge(var.global_tags, {
-    Name = "AWSControlTowerExecution"
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "execution_role_log_archive" {
-  provider   = aws.log_archive
-  role       = aws_iam_role.execution_role_log_archive.name
-  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AdministratorAccess"
-}
-
-# AWSControlTowerExecution role in audit account
-resource "aws_iam_role" "execution_role_audit" {
-  provider = aws.audit
-  name     = "AWSControlTowerExecution"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:${data.aws_partition.current.partition}:iam::${var.management_account_id}:root"
-        }
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-
-  tags = merge(var.global_tags, {
-    Name = "AWSControlTowerExecution"
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "execution_role_audit" {
-  provider   = aws.audit
-  role       = aws_iam_role.execution_role_audit.name
-  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AdministratorAccess"
-}
 
 locals {
   landing_zone_manifest = var.deploy_landing_zone ? templatefile("${path.module}/templates/LandingZoneManifest.tpl.json", {
@@ -264,11 +203,9 @@ resource "aws_controltower_landing_zone" "this" {
   depends_on = [
     aws_iam_role_policy.controltower_admin,
     aws_iam_role_policy_attachment.controltower_admin,
-    aws_iam_role_policy.controltower_cloudformation,
+    aws_iam_role_policy.controltower_cloudtrail,
     aws_iam_role_policy.controltower_stackset,
     aws_iam_role_policy_attachment.controltower_config_organizations,
-    aws_iam_role_policy_attachment.execution_role_log_archive,
-    aws_iam_role_policy_attachment.execution_role_audit
   ]
 
   # Note: Ignore manifest_json changes due to API string/number type inconsistencies
@@ -296,6 +233,7 @@ resource "aws_kms_key" "control_tower" {
   })
 }
 
+# https://docs.aws.amazon.com/controltower/latest/userguide/configure-kms-keys.html#kms-key-policy-update
 resource "aws_kms_key_policy" "control_tower" {
   key_id = aws_kms_key.control_tower.key_id
   policy = jsonencode({
@@ -355,15 +293,9 @@ resource "aws_kms_key_policy" "control_tower" {
         }
         Action = [
           "kms:Decrypt",
-          "kms:GenerateDataKey",
-          "kms:CreateGrant"
+          "kms:GenerateDataKey"
         ]
         Resource = aws_kms_key.control_tower.arn
-        Condition = {
-          StringEquals = {
-            "aws:PrincipalOrgID" = data.aws_organizations_organization.current.id
-          }
-        }
       },
       {
         Sid    = "Allow CloudTrail Service with Enhanced Controls"
@@ -373,8 +305,7 @@ resource "aws_kms_key_policy" "control_tower" {
         }
         Action = [
           "kms:GenerateDataKey*",
-          "kms:Decrypt",
-          "kms:CreateGrant"
+          "kms:Decrypt"
         ]
         Resource = aws_kms_key.control_tower.arn
         Condition = {
@@ -396,12 +327,12 @@ resource "aws_kms_key_policy" "control_tower" {
 # AWS Console or Customizations for Control Tower (CfCT).
 #
 # IMPORTANT: Do not modify Control Tower-managed resources:
-#   - Security/Sandbox OUs and their guardrails  
+#   - Security/Sandbox OUs and their guardrails
 #   - Multi-account CloudTrail/Config
 #   - Control Tower service roles
 #   - Log aggregation S3 buckets
 #
-# Resources: 
+# Resources:
 # - Landing Zone API: https://docs.aws.amazon.com/controltower/latest/userguide/lz-api-launch.html
 # - Control Reference: https://docs.aws.amazon.com/controltower/latest/controlreference/introduction.html
 # - Shared Resources: https://docs.aws.amazon.com/controltower/latest/userguide/shared-account-resources.html

@@ -123,10 +123,8 @@ locals {
   }
 
   # Provide the appropriate account set for organizations module
-  organizations_account_parameters = var.control_tower_enabled ? merge(
-    local.organizations_managed_accounts,
-    local.control_tower_managed_accounts
-  ) : local.aws_account_parameters
+  # When Control Tower is enabled, exclude Control Tower-managed accounts from Organizations
+  organizations_account_parameters = var.control_tower_enabled ? local.organizations_managed_accounts : local.aws_account_parameters
 
   # Provide a complete OU mapping for account placement
   # This combines manually created OUs with Control Tower-managed OUs

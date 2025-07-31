@@ -169,10 +169,10 @@ variable "aws_account_parameters" {
   # Control Tower validation - only when enabled
   validation {
     condition = !var.control_tower_enabled || alltrue([
+      # When Control Tower is enabled, only require management account in Organizations module
+      # audit and log_archive accounts are managed directly by Control Tower
       length([for v in values(var.aws_account_parameters) : v if v.account_type == "management"]) >= 1,
-      length([for v in values(var.aws_account_parameters) : v if v.account_type == "log_archive"]) >= 1,
-      length([for v in values(var.aws_account_parameters) : v if v.account_type == "audit"]) >= 1
     ])
-    error_message = "Control Tower requires management, log_archive, and audit accounts. See config/sra-account-types.yaml for valid account types."
+    error_message = "When Control Tower is enabled, Organizations module requires at least a management account. Audit and log_archive accounts are managed by Control Tower module."
   }
 }

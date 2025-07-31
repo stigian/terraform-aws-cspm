@@ -2,6 +2,8 @@
 
 This guide covers common issues when deploying AWS Control Tower, especially after a previous Control Tower landing zone has been decommissioned.
 
+> **Understanding the Architecture**: For context on why Control Tower manages specific OUs and accounts, see the [Security Team Guide](../../../docs/by_persona/security-team.md) and [Integration Strategy](../../../docs/architecture/integration-strategy.md).
+
 ## Critical Pre-deployment Blockers
 
 **Reference**: [AWS Control Tower Known Issues - Setup after decommissioning](https://docs.aws.amazon.com/en_us/controltower/latest/userguide/known-issues-decommissioning.html)
@@ -46,6 +48,91 @@ aws iam list-roles --query 'Roles[?starts_with(RoleName, `AWSControlTower`)].Rol
 # Delete roles (example)
 aws iam delete-role-policy --role-name AWSControlTowerAdmin --policy-name AWSControlTowerAdminPolicy
 aws iam detach-role-policy --role-name AWSControlTowerAdmin --policy-arn arn:aws:iam::aws:policy/service-role/AWSControlTowerServiceRolePolicy
+
+# Important: Also delete any remaining inline policies
+aws iam delete-role --role-name AWSControlTowerAdmin
+```
+
+---
+
+## Emergency Control Tower Recovery
+
+### If Control Tower Deployment Fails Mid-Process
+
+Sometimes Control Tower deployment can fail partially, leaving resources in an inconsistent state. Here's the recovery procedure:
+
+#### 1. Remove from Terraform State
+```bash
+# Remove the Control Tower resource from Terraform state
+# This doesn't delete AWS resources, just removes Terraform tracking
+tofu state rm "module.controltower.aws_controltower_landing_zone.this[0]"
+```
+
+#### 2. Check Control Tower Status
+```bash
+# List any existing landing zones
+aws controltower list-landing-zones --region us-gov-west-1
+
+# Check operation status  
+aws controltower list-landing-zone-operations --region us-gov-west-1
+
+# Get operation details for failed operations
+aws controltower get-landing-zone-operation \
+  --operation-identifier "operation-id" \
+  --region us-gov-west-1
+```
+
+#### 3. Clean Up Failed Deployment (If Necessary)
+If the landing zone is in a failed state, you may need to:
+
+```bash
+# Delete the failed landing zone (if it exists)
+aws controltower delete-landing-zone \
+  --landing-zone-identifier "landing-zone-id" \
+  --region us-gov-west-1
+
+# Wait for deletion to complete
+aws controltower get-landing-zone-operation \
+  --operation-identifier "delete-operation-id" \
+  --region us-gov-west-1
+```
+
+#### 4. Retry Deployment
+```bash
+# Re-run Terraform deployment
+cd examples/
+tofu plan -target=module.controltower
+tofu apply -target=module.controltower
+```
+
+### Checking Landing Zone Health
+
+#### Monitor Deployment Progress
+```bash
+# Check current status
+aws controltower list-landing-zone-operations \
+  --region us-gov-west-1 \
+  --query 'LandingZoneOperations[0].{Status:Status,Type:OperationType,StartTime:StartTime}'
+
+# Follow specific operation
+aws controltower get-landing-zone-operation \
+  --operation-identifier "operation-id" \
+  --region us-gov-west-1 \
+  --query '{Status:Status,StatusMessage:StatusMessage}'
+```
+
+#### Verify Successful Deployment
+```bash
+# Confirm landing zone is active
+aws controltower get-landing-zone \
+  --landing-zone-identifier "landing-zone-id" \
+  --region us-gov-west-1 \
+  --query 'LandingZone.Status'
+
+# Should return: "ACTIVE"
+```
+
+---
 aws iam delete-role --role-name AWSControlTowerAdmin
 ```
 

@@ -8,10 +8,19 @@ updates:
 
   - package-ecosystem: "terraform"
     directories:
-      - "/infra/cspm"
-      - "/infra/hubandspoke"
-      - "/infra/icam"
-      - "/modules/iam-kms"
+      - "/" # Root module
+      - "/examples" # Basic examples
+      - "/examples/advanced" # Advanced configuration examples
+      - "/examples/simple" # Simple configuration examples
+      - "/modules/awsconfig" # AWS Config module
+      - "/modules/controltower" # Control Tower module
+      - "/modules/detective" # Detective module
+      - "/modules/guardduty" # GuardDuty module
+      - "/modules/inspector2" # Inspector2 module
+      - "/modules/organizations" # Organizations module
+      - "/modules/securityhub" # Security Hub module
+      - "/modules/sso" # SSO module
+      - "/modules/yaml-transform" # YAML transformation module
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 0 # Uncomment to disable automatic PRs
