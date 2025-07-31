@@ -12,6 +12,14 @@ Complete guide on how to add new Organizational Units and lifecycle phases to yo
 - Complete examples with staging environments
 - Best practices and troubleshooting
 
+### [Control Tower Integration](./control-tower-integration.md)
+**Essential reading for Control Tower deployments**  
+Comprehensive guide on how the module integrates with AWS Control Tower landing zones. Covers:
+- Hybrid OU management strategy (Organizations + Control Tower)
+- Account placement behavior during deployment phases
+- Configuration guidelines and troubleshooting
+- Architecture benefits and design decisions
+
 ## 🏗️ Architecture & Strategy
 
 ### [Integration Strategy](./integration-strategy.md)
@@ -29,6 +37,7 @@ Detailed patterns for managing Terraform providers across multiple AWS accounts 
 
 ### Common Tasks
 - **Adding new OUs**: See [Extending OUs and Lifecycles](./extending-ous-and-lifecycles.md)
+- **Control Tower deployment**: See [Control Tower Integration](./control-tower-integration.md)
 - **Account management**: Check the main [README.md](../README.md)
 - **SSO configuration**: See `modules/sso/README.md`
 - **Control Tower setup**: See `modules/controltower/README.md`

@@ -1,6 +1,5 @@
 data "aws_organizations_organization" "this" {}
 
-# Detect AWS partition to determine if we're running in GovCloud
 data "aws_partition" "current" {}
 
 # Load AWS Security Reference Architecture (SRA) Account Types from YAML

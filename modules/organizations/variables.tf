@@ -21,15 +21,24 @@ variable "control_tower_enabled" {
   description = <<-EOT
     Whether Control Tower will be deployed with this organization.
 
-    When true:
+    **IMPORTANT: This significantly changes OU management behavior:**
+
+    When true (Control Tower mode):
+    - Organizations module will NOT create "Security" and "Sandbox" OUs
+    - Control Tower landing zone will create and manage these OUs instead
+    - Accounts targeting Control Tower-managed OUs are temporarily placed at Root
+    - Control Tower will move them to proper OUs during landing zone deployment
     - Enforces Control Tower account requirements (management, log_archive, audit accounts)
     - Validates AccountType tags and specific OU placements
-    - Requires minimum 3 accounts with proper configuration
 
-    When false:
-    - Only enforces basic AWS Organizations requirements
+    When false (Organizations-only mode):
+    - Organizations module creates ALL OUs defined in organizational_units
+    - No Control Tower integration or constraints
     - AccountType tags are optional
     - More flexible OU assignments allowed
+
+    **Control Tower-managed OUs:** Security, Sandbox
+    **Organizations-managed OUs:** Infrastructure_Prod, Infrastructure_NonProd, Workloads_Prod, Workloads_NonProd, Policy_Staging, Suspended
   EOT
   type        = bool
   default     = true
@@ -47,11 +56,22 @@ variable "organizational_units" {
     
     Uses AWS Security Reference Architecture (SRA) standard OUs by default:
     - Security: For audit, log archive, and security tooling accounts
-    - Infrastructure_Prod/Test: For network and shared services accounts  
-    - Workloads_Prod/Test: For application workload accounts
+    - Infrastructure_Prod/NonProd: For network and shared services accounts  
+    - Workloads_Prod/NonProd: For application workload accounts
     - Sandbox: For experimentation and development
     - Policy_Staging: For testing organizational policies
     - Suspended: For decommissioned accounts
+
+    **CONTROL TOWER INTEGRATION:**
+    When control_tower_enabled = true:
+    - "Security" and "Sandbox" OUs are NOT created by this module
+    - Control Tower landing zone creates and manages these OUs
+    - Only the remaining OUs are created by the organizations module
+    - Accounts targeting Control Tower OUs are placed at Root initially, then moved by Control Tower
+
+    When control_tower_enabled = false:
+    - ALL OUs defined here are created by the organizations module
+    - Standard organizational structure with no Control Tower constraints
 
     Example:
       {
@@ -101,6 +121,17 @@ variable "aws_account_parameters" {
           account_type = "management"
         }
       }
+
+    **CONTROL TOWER ACCOUNT PLACEMENT:**
+    When control_tower_enabled = true:
+    - Accounts with ou = "Security" or ou = "Sandbox" are placed at "Root" initially
+    - Control Tower landing zone will move them to the proper Control Tower-managed OUs
+    - Other accounts are placed in organizations-managed OUs normally
+    - Required account types: management, log_archive, audit (see validation below)
+
+    When control_tower_enabled = false:
+    - All accounts are placed in their specified OUs directly
+    - No Control Tower constraints or account type requirements
 
     See config/account-schema.yaml for detailed field definitions and examples.
     See config/sra-account-types.yaml for valid account_type values.
