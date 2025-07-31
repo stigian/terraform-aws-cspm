@@ -5,21 +5,17 @@
 #   id = "o-1234567890"
 # }
 
-provider "aws" {
-  region  = var.aws_region
-  profile = "cnscca-gov-mgmt"
-}
-
 data "aws_partition" "current" {}
 
 # Load configuration from YAML files
 module "yaml_transform" {
   source = "../modules/yaml-transform"
 
-  config_directory  = "${path.module}/config"
-  project           = var.project
-  global_tags       = var.global_tags
-  enable_validation = true
+  config_directory      = "${path.module}/config"
+  project               = var.project
+  global_tags           = var.global_tags
+  enable_validation     = true
+  control_tower_enabled = var.control_tower_enabled
 }
 
 # Conditionally import the AWS Organization resource only if an organization ID is provided.
@@ -48,12 +44,12 @@ import {
 module "organizations" {
   source = "../modules/organizations"
 
-  # Configuration from YAML transformation
   project                = module.yaml_transform.project
   global_tags            = module.yaml_transform.global_tags
   aws_organization_id    = var.aws_organization_id
-  aws_account_parameters = module.yaml_transform.aws_account_parameters
-  organizational_units   = module.yaml_transform.organizational_units
+  aws_account_parameters = module.yaml_transform.organizations_account_parameters
+  organizational_units   = module.yaml_transform.organizations_managed_ous
+  control_tower_enabled  = var.control_tower_enabled
 }
 
 module "controltower" {
@@ -61,19 +57,22 @@ module "controltower" {
 
   depends_on = [module.organizations]
 
+  # Pass cross-account providers
+  providers = {
+    aws.log_archive = aws.log_archive
+    aws.audit       = aws.audit
+  }
+
   # Account IDs from yaml_transform module
   management_account_id  = module.yaml_transform.management_account_id
   log_archive_account_id = module.yaml_transform.log_archive_account_id
   audit_account_id       = module.yaml_transform.audit_account_id
 
-  # Configuration consistency
-  project     = module.yaml_transform.project
-  global_tags = module.yaml_transform.global_tags
-  aws_region  = var.aws_region
-
-  # Control Tower settings
+  project             = module.yaml_transform.project
+  global_tags         = module.yaml_transform.global_tags
+  aws_region          = var.aws_region
   self_managed_sso    = true # This sets accessManagement.enabled = false
-  deploy_landing_zone = false
+  deploy_landing_zone = true
 }
 
 module "sso" {
@@ -116,6 +115,15 @@ module "sso" {
   # identifier_uri               = var.identifier_uri
   # entra_group_admin_object_ids = var.entra_group_admin_object_ids
 }
+
+# module "guardduty" {
+#   source = "../modules/guardduty"
+
+#   audit_account_id = module.yaml_transform.audit_account_id
+#   global_tags      = module.yaml_transform.global_tags
+
+#   depends_on = [module.organizations]
+# }
 
 
 

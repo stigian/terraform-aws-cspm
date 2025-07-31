@@ -11,8 +11,13 @@ output "global_tags" {
 
 # Organizations module inputs
 output "aws_account_parameters" {
-  description = "Processed account parameters for organizations module"
+  description = "Processed account parameters for organizations module (original configuration)"
   value       = local.aws_account_parameters
+}
+
+output "organizations_account_parameters" {
+  description = "Account parameters optimized for organizations module with Control Tower integration"
+  value       = local.organizations_account_parameters
 }
 
 output "organizational_units" {
@@ -51,6 +56,17 @@ output "audit_account_id" {
 output "accounts_by_type" {
   description = "Accounts organized by SRA account type (useful for security services)"
   value       = local.accounts_by_type
+}
+
+# OU management and placement configuration
+output "ou_placement_config" {
+  description = "OU placement configuration for Control Tower integration"
+  value       = local.ou_placement_config
+}
+
+output "organizations_managed_ous" {
+  description = "OUs that should be created by the organizations module (excludes Control Tower-managed OUs)"
+  value       = local.organizations_managed_ous
 }
 
 # Raw data access (for advanced use cases)

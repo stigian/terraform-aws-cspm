@@ -29,3 +29,9 @@ variable "enable_validation" {
   type        = bool
   default     = true
 }
+
+variable "control_tower_enabled" {
+  description = "Whether Control Tower will be deployed. Affects OU management strategy."
+  type        = bool
+  default     = true
+}

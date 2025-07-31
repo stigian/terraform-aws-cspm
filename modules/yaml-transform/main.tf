@@ -94,31 +94,73 @@ locals {
     }
   }
 
+  # OU resolution for Control Tower integration
+  # When Control Tower is enabled, some OUs are managed by Control Tower
+  control_tower_managed_ous = var.control_tower_enabled ? ["Security", "Sandbox"] : []
+
+  # Split OUs into those managed by organizations module vs Control Tower
+  organizations_managed_ous = {
+    for ou_name, ou_config in local.organizational_units :
+    ou_name => ou_config
+    if !contains(local.control_tower_managed_ous, ou_name)
+  }
+
+  # Split accounts based on whether they'll be placed in Control Tower-managed OUs
+  # Accounts going to Control Tower OUs should be left at Root initially
+  # Control Tower will move them to the correct OU during landing zone deployment
+  control_tower_managed_accounts = {
+    for account_id, account_data in local.aws_account_parameters :
+    account_id => merge(account_data, {
+      ou = "Root" # Override OU placement - Control Tower will handle it
+    })
+    if contains(local.control_tower_managed_ous, account_data.ou)
+  }
+
+  organizations_managed_accounts = {
+    for account_id, account_data in local.aws_account_parameters :
+    account_id => account_data
+    if !contains(local.control_tower_managed_ous, account_data.ou)
+  }
+
+  # Provide the appropriate account set for organizations module
+  organizations_account_parameters = var.control_tower_enabled ? merge(
+    local.organizations_managed_accounts,
+    local.control_tower_managed_accounts
+  ) : local.aws_account_parameters
+
+  # Provide a complete OU mapping for account placement
+  # This combines manually created OUs with Control Tower-managed OUs
+  ou_placement_config = {
+    organizations_managed_ous = local.organizations_managed_ous
+    control_tower_managed_ous = local.control_tower_managed_ous
+    all_ou_names              = keys(local.organizational_units)
+  }
+
   # Validation checks (when enabled)
   validation_errors = var.enable_validation ? concat(
     # Account ID format validation
     [for account_id in keys(local.aws_account_parameters) :
-     "Invalid account ID format: ${account_id}" if !can(regex("^[0-9]{12}$", account_id))],
-    
+    "Invalid account ID format: ${account_id}" if !can(regex("^[0-9]{12}$", account_id))],
+
     # Email format validation
     [for account_id, account in local.aws_account_parameters :
-     "Invalid email format for account ${account_id}: ${account.email}" 
-     if !can(regex("^\\S+@\\S+\\.\\S+$", account.email))],
-    
+      "Invalid email format for account ${account_id}: ${account.email}"
+    if !can(regex("^\\S+@\\S+\\.\\S+$", account.email))],
+
     # Lifecycle validation
     [for account_id, account in local.aws_account_parameters :
-     "Invalid lifecycle for account ${account_id}: ${account.lifecycle} (must be 'prod' or 'nonprod')"
-     if !contains(["prod", "nonprod"], account.lifecycle)],
-    
+      "Invalid lifecycle for account ${account_id}: ${account.lifecycle} (must be 'prod' or 'nonprod')"
+    if !contains(["prod", "nonprod"], account.lifecycle)],
+
     # OU lifecycle validation
     [for ou_name, ou in local.organizational_units :
-     "Invalid lifecycle for OU ${ou_name}: ${ou.lifecycle} (must be 'prod' or 'nonprod')"
-     if !contains(["prod", "nonprod"], ou.lifecycle)],
-    
+      "Invalid lifecycle for OU ${ou_name}: ${ou.lifecycle} (must be 'prod' or 'nonprod')"
+    if !contains(["prod", "nonprod"], ou.lifecycle)],
+
     # Account type validation against SRA types
     [for account_id, account in local.aws_account_parameters :
-     "Invalid account_type for account ${account_id}: ${account.account_type} (not found in SRA account types)"
-     if account.account_type != "" && !contains(keys(local.sra_account_types), account.account_type)]
+      "Invalid account_type for account ${account_id}: ${account.account_type} (not found in SRA account types)"
+    if account.account_type != "" && !contains(keys(local.sra_account_types), account.account_type)]
   ) : []
 }
 

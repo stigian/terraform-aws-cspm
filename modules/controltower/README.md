@@ -3,6 +3,8 @@
 
 This Terraform module deploys and configures AWS Control Tower Landing Zone with enhanced security features. The module provides a secure, scalable foundation for multi-account AWS environments following AWS Security Reference Architecture (SRA) patterns.
 
+> **⚠️ IMPORTANT**: If you previously had Control Tower deployed and decommissioned it, please review the [Control Tower Troubleshooting Guide](../../docs/control-tower-troubleshooting.md) before deployment. Manual cleanup is required to avoid deployment failures.
+
 ---
 
 ## Features
@@ -326,6 +328,37 @@ global_tags = {
   Classification = "CUI"
   Environment   = "production"
 }
+```
+
+---
+
+## Troubleshooting
+
+### Pre-deployment Validation
+
+Before deploying this module, especially after a previous Control Tower decommissioning, ensure:
+
+1. **No Security/Sandbox OUs** at organization root level
+2. **No Control Tower IAM roles** remain in management account
+3. **No reserved S3 buckets** exist in logging account
+4. **No CloudWatch log groups** named `aws-controltower/CloudTrailLogs`
+
+**Complete troubleshooting guide**: [Control Tower Troubleshooting Guide](../../docs/control-tower-troubleshooting.md)
+
+### Common Issues
+
+- **"ValidationException: could not assume AWSControlTowerAdmin role"**: Control Tower service roles missing
+- **S3 bucket "already exists" errors**: Previous deployment left reserved bucket names
+- **Permission denied errors**: Cross-account providers not configured properly
+
+### Emergency Recovery
+
+```bash
+# Check landing zone status
+aws controltower list-landing-zones --region us-gov-west-1
+
+# Remove from Terraform state if needed
+tofu state rm "module.controltower.aws_controltower_landing_zone.this[0]"
 ```
 
 ---

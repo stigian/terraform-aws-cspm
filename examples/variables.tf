@@ -29,6 +29,12 @@ variable "aws_organization_id" {
   default     = null
 }
 
+variable "control_tower_enabled" {
+  description = "Whether Control Tower will be deployed with this organization."
+  type        = bool
+  default     = true
+}
+
 # NOTE: aws_account_parameters is now loaded from YAML files via the yaml-transform module
 # Account configurations are in config/accounts/*.yaml files
 # This provides better version control, readability, and validation
