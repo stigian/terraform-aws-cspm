@@ -1,53 +1,177 @@
 
-# AWS Control Tower Module
+# Control Tower Module
 
-This Terraform module deploys and configures AWS Control Tower Landing Zone with enhanced security features. The module provides a secure, scalable foundation for multi-account AWS environments following AWS Security Reference Architecture (SRA) patterns.
+## Overview
 
-> **⚠️ IMPORTANT**: If you previously had Control Tower deployed and decommissioned it, please review the [Control Tower Troubleshooting Guide](../../docs/control-tower-troubleshooting.md) before deployment. Manual cleanup is required to avoid deployment failures.
+This module deploys AWS Control Tower Landing Zone with enhanced security features for DoD Zero Trust CSPM environments. It establishes governance guardrails, centralized logging, and automated account provisioning while integrating with organizational KMS infrastructure.
 
----
+**Key Architecture Pattern**: Conditional landing zone deployment with `deploy_landing_zone` flag - allows KMS-only setup for manual Control Tower configuration or integration with existing Control Tower deployments.
 
-## Features
+## Architecture Pattern
 
-- **AWS Control Tower Landing Zone**: Automated deployment of Control Tower v3.3+
-- **Enhanced KMS Security**: Custom KMS keys with organizational boundaries and SSO integration
-- **Flexible Deployment**: Optional landing zone deployment with `deploy_landing_zone` flag
-- **Independent Operation**: Works standalone or integrated with other modules
-- **GovCloud Support**: Automatic detection and handling of AWS GovCloud partition differences
-- **SSO-Aware Security**: KMS policies integrate with IAM Identity Center role patterns
+### Landing Zone Foundation
+- **Control Tower Deployment**: Optional full landing zone with guardrails and baseline controls
+- **KMS Integration**: Enhanced encryption with organizational boundaries and SSO-aware policies
+- **Multi-Account Governance**: Automated guardrails across Security, Workloads, and Sandbox OUs
+- **Partition Support**: Automatically handles Commercial and GovCloud deployment differences
 
----
+### Resource Management Strategy
+When `deploy_landing_zone = true`:
+- Creates complete Control Tower landing zone with required IAM roles
+- Deploys organizational guardrails and baseline security controls
+- Establishes centralized CloudTrail and Config configuration
+- Requires management, log_archive, and audit account IDs
 
-## Architecture
+When `deploy_landing_zone = false`:
+- Creates only KMS resources for Control Tower integration
+- Allows manual Control Tower setup or integration with existing deployments
+- Supports scenarios where Control Tower is managed outside Terraform
 
-This module creates and manages:
+### SSO Integration Features
+- **Self-Managed SSO**: Default `self_managed_sso = true` disables Control Tower SSO management
+- **KMS Policy Integration**: Automatically includes SSO Administrator role ARNs in KMS policies
+- **Role-Based Access**: Supports additional KMS admin ARNs for specific users and roles
 
+## Deployment Requirements
+
+### Prerequisites
+1. **Account Structure**: Requires existing management, log_archive, and audit accounts (from Organizations module)
+   ```hcl
+   module "controltower" {
+     source = "./modules/controltower"
+     
+     management_account_id   = "123456789012"  # From organizations output
+     log_archive_account_id  = "123456789013"  # From organizations output  
+     audit_account_id        = "123456789014"  # From organizations output
+   }
+   ```
+
+2. **IAM Permissions**: Management account must have Control Tower service permissions
+3. **Regional Requirements**: Must deploy in Control Tower supported regions (us-east-1, us-gov-west-1, etc.)
+
+### Configuration Variables
+- **`deploy_landing_zone`**: Boolean controlling full deployment vs KMS-only mode
+- **`self_managed_sso`**: Boolean disabling Control Tower SSO management (default: true)
+- **`additional_kms_key_admin_arns`**: List of additional IAM ARNs for KMS administration
+- **Required Account IDs**: management_account_id, log_archive_account_id, audit_account_id
+
+### Provider Requirements
+```hcl
+provider "aws" {
+  region  = "us-gov-west-1"  # GovCloud deployments
+  profile = "management-account-profile"
+}
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Control Tower Landing Zone              │
-├─────────────────────────────────────────────────────────────┤
-│ Management Account (Organization Root) │                   │
-│ ├─ AWS Control Tower Service            │  Security OU     │
-│ ├─ AWS Organizations                    │  ├─ Log Archive  │
-│ ├─ AWS SSO/Identity Center             │  ├─ Audit        │
-│ └─ Enhanced KMS Keys                    │  └─ Security     │
-│                                         │                  │
-│ Workloads OU                           │  Infrastructure   │
-│ ├─ Production Accounts                 │  ├─ Network       │
-│ ├─ Non-Production Accounts             │  ├─ Shared Svcs   │
-│ └─ Sandbox Accounts                    │  └─ Deployment    │
-└─────────────────────────────────────────────────────────────┘
+
+## Troubleshooting
+
+### Landing Zone Deployment Issues
+1. **Previous Control Tower Cleanup**: Manual cleanup required if Control Tower was previously decommissioned
+2. **Account Validation Failures**: Verify account IDs are 12-digit strings and accounts exist
+3. **Regional Constraints**: Ensure deployment region supports Control Tower (limited regions available)
+
+### KMS Key Management Problems
+- **Policy Conflicts**: Check additional_kms_key_admin_arns for valid IAM ARN format
+- **SSO Integration Issues**: Verify SSO Administrator roles exist when self_managed_sso = true
+- **Cross-Account Access**: Ensure organizational boundaries allow intended account access
+
+### Role Creation Failures
+```hcl
+# Check for existing roles that may conflict
+aws iam get-role --role-name AWSControlTowerServiceRoleForManagement
 ```
 
-### Core Components Created
+## Integration with Other Modules
 
-1. **AWS Control Tower Landing Zone**
-   - Version 3.3+ with latest security baselines
-   - Automated account provisioning workflows
-   - Guardrails for governance and compliance
-   - Centralized logging and monitoring
+### Organizations Module Integration
+- **Account Requirements**: Consumes management, log_archive, and audit account IDs from organizations outputs
+- **OU Coordination**: Works with organizations module to establish Security and Sandbox OUs
+- **Foundation Dependency**: Must deploy after organizations module establishes account structure
 
-2. **Enhanced KMS Infrastructure**
+### SSO Module Integration
+- **Self-Managed Mode**: Default configuration allows SSO module to manage IAM Identity Center independently
+- **KMS Policy Integration**: Automatically includes SSO Administrator roles in KMS key policies
+- **Access Management**: Supports SSO-based access patterns for Control Tower administration
+
+### Security Services Integration
+- **Centralized Logging**: Provides CloudTrail foundation for security service monitoring
+- **Config Integration**: Establishes configuration compliance baseline for security services
+- **Audit Account Foundation**: Supports audit account as delegated administrator for security services
+
+## DoD-Specific Considerations
+
+### GovCloud Deployment Patterns
+- **Partition Detection**: Automatically adjusts ARN formats and service availability for GovCloud
+- **Regional Limitations**: Supports us-gov-west-1 and us-gov-east-1 Control Tower availability
+- **Compliance Controls**: Implements Control Tower guardrails aligned with DoD security requirements
+
+### Enterprise Security Features
+- **Enhanced KMS Security**: Organizational boundaries prevent cross-organization access
+- **SSO-Aware Policies**: Integrates with enterprise identity management patterns
+- **Audit Trail Integration**: Supports DoD audit and compliance reporting requirements
+
+### Operational Constraints
+- **Landing Zone Lifecycle**: Control Tower landing zones cannot be easily destroyed - requires careful planning
+- **Manual Integration Points**: Some Control Tower features require manual configuration outside Terraform
+- **Service Role Management**: Control Tower service roles created with specific organizational permissions
+
+<!-- BEGIN_TF_DOCS -->
+## Requirements
+
+| Name | Version |
+|------|---------|
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.0.0 |
+
+## Providers
+
+| Name | Version |
+|------|---------|
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.4.0 |
+
+## Modules
+
+No modules.
+
+## Resources
+
+| Name | Type |
+|------|------|
+| [aws_controltower_landing_zone.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/controltower_landing_zone) | resource |
+| [aws_iam_role.controltower_admin](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
+| [aws_iam_role.controltower_cloudtrail](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
+| [aws_iam_role.controltower_config](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
+| [aws_iam_role.controltower_stackset](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
+| [aws_iam_role_policy.controltower_admin](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
+| [aws_iam_role_policy.controltower_cloudtrail](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
+| [aws_iam_role_policy.controltower_stackset](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
+| [aws_iam_role_policy_attachment.controltower_admin](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
+| [aws_iam_role_policy_attachment.controltower_config_organizations](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
+| [aws_kms_alias.control_tower](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kms_alias) | resource |
+| [aws_kms_key.control_tower](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kms_key) | resource |
+| [aws_kms_key_policy.control_tower](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kms_key_policy) | resource |
+| [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
+| [aws_organizations_organization.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/organizations_organization) | data source |
+| [aws_partition.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/partition) | data source |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| <a name="input_additional_kms_key_admin_arns"></a> [additional\_kms\_key\_admin\_arns](#input\_additional\_kms\_key\_admin\_arns) | Optional list of additional IAM ARNs that will be granted KMS key administrative permissions.<br/><br/>Use this to grant KMS admin access to specific users, roles, or external accounts beyond the default admins:<br/>- Current Terraform caller<br/>- SSO Administrator roles<br/>- Project-specific admin roles<br/><br/>Example: ["arn:aws-us-gov:iam::123456789012:user/admin", "arn:aws-us-gov:iam::123456789012:role/SecurityTeam"] | `list(string)` | `[]` | no |
+| <a name="input_audit_account_id"></a> [audit\_account\_id](#input\_audit\_account\_id) | Account ID for the Control Tower audit account. | `string` | n/a | yes |
+| <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS region where resources will be created. Auto-detected from provider if not specified. | `string` | `null` | no |
+| <a name="input_deploy_landing_zone"></a> [deploy\_landing\_zone](#input\_deploy\_landing\_zone) | Whether to deploy the AWS Control Tower Landing Zone.<br/><br/>When true: Deploys full Control Tower landing zone with guardrails and baseline controls<br/>When false: Only creates KMS resources, allowing manual Control Tower setup or existing setup<br/><br/>REQUIREMENT: If true, you must provide management\_account\_id, log\_archive\_account\_id, and audit\_account\_id | `bool` | `true` | no |
+| <a name="input_global_tags"></a> [global\_tags](#input\_global\_tags) | Tags applied to all resources created by this module. | `map(string)` | <pre>{<br/>  "ManagedBy": "opentofu"<br/>}</pre> | no |
+| <a name="input_log_archive_account_id"></a> [log\_archive\_account\_id](#input\_log\_archive\_account\_id) | Account ID for the Control Tower log archive account. | `string` | n/a | yes |
+| <a name="input_management_account_id"></a> [management\_account\_id](#input\_management\_account\_id) | Account ID for the AWS Organization management account. | `string` | n/a | yes |
+| <a name="input_project"></a> [project](#input\_project) | Name of the project or application. Used for resource naming and tagging. | `string` | `"CnScca"` | no |
+| <a name="input_self_managed_sso"></a> [self\_managed\_sso](#input\_self\_managed\_sso) | Whether to use self-managed SSO (accessManagement.enabled = false in manifest). When true, Control Tower will not manage IAM Identity Center resources, allowing you to manage SSO independently. Defaults to true as terraform-aws-cspm provides its own SSO module for lifecycle management. | `bool` | `true` | no |
+
+## Outputs
+
+No outputs.
+<!-- END_TF_DOCS -->
    - Organization-scoped KMS key for Control Tower resources
    - SSO-aware key policies with precise role matching
    - Management account restricted access patterns

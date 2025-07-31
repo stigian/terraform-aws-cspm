@@ -11,7 +11,8 @@
 1. **[Administrator Guide](./by_persona/administrator.md)** - Complete setup, deployment, and configuration guide
 2. **[Operations Guide](./by_persona/operations.md)** - Daily operations, monitoring, and maintenance procedures  
 3. **[Security Team Guide](./by_persona/security-team.md)** - Security architecture, monitoring, and incident response
-4. **[AWS SRA Compliance](./architecture/aws-sra-compliance.md)** - AWS Security Reference Architecture alignment
+4. **[DISA SCCA Compliance](./architecture/disa-scca-compliance.md)** - DISA Secure Cloud Computing Architecture alignment
+5. **[AWS SRA Compliance](./architecture/aws-sra-compliance.md)** - AWS Security Reference Architecture fallback patterns
 
 ---
 
@@ -103,6 +104,7 @@ Each service module contains detailed technical implementation documentation:
 - **SSO management**: [Module docs](../modules/sso/docs/) + [Access management](./by_persona/operations.md#access-management)
 
 ### By Architecture
+- **DISA SCCA alignment**: [DISA SCCA Compliance](./architecture/disa-scca-compliance.md#scca-component-mapping)
 - **Account structure**: [AWS SRA Compliance](./architecture/aws-sra-compliance.md#account-structure--ou-design)
 - **Security services**: [Security Guide](./by_persona/security-team.md#security-service-architecture)
 - **Hybrid design**: [Administrator Guide](./by_persona/administrator.md#architecture-understanding)
