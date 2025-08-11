@@ -1,5 +1,26 @@
+# Attach AmazonDetectiveFullAccess to aws_admin permission set for Detective console/API access
+resource "aws_ssoadmin_managed_policy_attachment" "detective_fullaccess" {
+  for_each           = local.sso_management_enabled && contains(keys(local.aws_sso_groups), "aws_admin") ? { aws_admin = local.aws_sso_groups["aws_admin"] } : {}
+  instance_arn       = tolist(data.aws_ssoadmin_instances.this[0].arns)[0]
+  managed_policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonDetectiveFullAccess"
+  permission_set_arn = aws_ssoadmin_permission_set.this[each.key].arn
+}
 data "aws_partition" "current" {}
 data "aws_caller_identity" "current" {}
+
+# Validate existing admin user exists in Identity Store (if provided)
+data "aws_identitystore_user" "existing_admin_user" {
+  count             = var.existing_admin_user_id != null ? 1 : 0
+  identity_store_id = data.aws_ssoadmin_instances.this[0].identity_store_ids[0]
+  user_id           = var.existing_admin_user_id
+}
+
+check "existing_admin_user_exists" {
+  assert {
+    condition     = var.existing_admin_user_id == null || length(data.aws_identitystore_user.existing_admin_user) > 0
+    error_message = "Existing admin user ID '${var.existing_admin_user_id}' does not exist in Identity Store. Verify the user ID is correct and the user hasn't been deleted."
+  }
+}
 
 # Load AWS Security Reference Architecture (SRA) Account Types from YAML
 # These match accreditation requirements and cannot be changed

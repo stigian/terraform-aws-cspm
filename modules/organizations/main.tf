@@ -1,19 +1,25 @@
+data "aws_partition" "current" {}
 data "aws_organizations_organization" "this" {}
 
-data "aws_partition" "current" {}
+# Validate that all provided account IDs are actually members of this organization
+# Can be disabled for synthetic testing by setting enable_runtime_validation = false
+check "accounts_exist_in_organization" {
+  assert {
+    condition = var.enable_runtime_validation ? alltrue([
+      for account_id in keys(var.organizations_account_parameters) :
+      contains(data.aws_organizations_organization.this.accounts[*].id, account_id)
+    ]) : true
+    error_message = "Some account IDs provided are not members of organization ${data.aws_organizations_organization.this.id}. Check that accounts exist and are not in a different organization."
+  }
+}
 
 # Load AWS Security Reference Architecture (SRA) Account Types from YAML
 # These match accreditation requirements and cannot be changed
 locals {
   sra_account_types = yamldecode(file("${path.module}/../../config/sra-account-types.yaml"))
 
-  # Extract just the account type names for validation
+  # Map of valid account types for validation
   valid_account_types = keys(local.sra_account_types)
-}
-
-# Process account parameters (no transformation needed since we use explicit ou/lifecycle)
-locals {
-  processed_accounts = var.aws_account_parameters
 
   # Add Project tag to global tags
   global_tags = merge(var.global_tags, {
@@ -56,9 +62,8 @@ resource "aws_organizations_organizational_unit" "this" {
   )
 }
 
-# AWS Organizations accounts for commercial AWS (normal lifecycle behavior)
 resource "aws_organizations_account" "commercial" {
-  for_each = data.aws_partition.current.partition != "aws-us-gov" ? local.processed_accounts : {}
+  for_each = data.aws_partition.current.partition != "aws-us-gov" ? var.organizations_account_parameters : {}
 
   name      = each.value.name
   email     = each.value.email
@@ -69,7 +74,6 @@ resource "aws_organizations_account" "commercial" {
     {
       Lifecycle = each.value.lifecycle
     },
-    # Add AccountType tag if account_type is specified
     each.value.account_type != "" ? { AccountType = each.value.account_type } : {}
   )
 
@@ -78,9 +82,8 @@ resource "aws_organizations_account" "commercial" {
   }
 }
 
-# AWS Organizations accounts for GovCloud (ignore name changes)
 resource "aws_organizations_account" "govcloud" {
-  for_each = data.aws_partition.current.partition == "aws-us-gov" ? local.processed_accounts : {}
+  for_each = data.aws_partition.current.partition == "aws-us-gov" ? var.organizations_account_parameters : {}
 
   name      = each.value.name
   email     = each.value.email
@@ -91,7 +94,6 @@ resource "aws_organizations_account" "govcloud" {
     {
       Lifecycle = each.value.lifecycle
     },
-    # Add AccountType tag if account_type is specified
     each.value.account_type != "" ? { AccountType = each.value.account_type } : {}
   )
 

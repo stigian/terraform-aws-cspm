@@ -10,15 +10,24 @@ output "organizational_unit_ids" {
 
 output "account_id_map" {
   description = "Map of account names to account IDs for use by other modules (e.g., SSO, Control Tower)."
-  value       = { for account_id, account in var.aws_account_parameters : account.name => account_id }
+  value = {
+    for account_id, account in(
+      length(var.all_accounts_all_parameters) > 0 ?
+      var.all_accounts_all_parameters :
+      var.organizations_account_parameters
+    ) : account.name => account_id
+  }
 }
 
-# NEW: Structured account data organized by SRA account type
 output "accounts_by_type" {
   description = "Accounts organized by their SRA account type for easy module integration."
   value = {
     for account_type in local.valid_account_types : account_type => {
-      for account_id, account in var.aws_account_parameters :
+      for account_id, account in(
+        length(var.all_accounts_all_parameters) > 0 ?
+        var.all_accounts_all_parameters :
+        var.organizations_account_parameters
+      ) :
       account_id => {
         name  = account.name
         email = account.email
@@ -31,7 +40,13 @@ output "accounts_by_type" {
 
 output "account_organizational_units" {
   description = "Map of account IDs to their OU names."
-  value       = { for account_id, account in var.aws_account_parameters : account_id => account.ou }
+  value = {
+    for account_id, account in(
+      length(var.all_accounts_all_parameters) > 0 ?
+      var.all_accounts_all_parameters :
+      var.organizations_account_parameters
+    ) : account_id => account.ou
+  }
 }
 
 output "project" {
@@ -59,11 +74,14 @@ output "account_resources" {
   value       = data.aws_partition.current.partition == "aws-us-gov" ? aws_organizations_account.govcloud : aws_organizations_account.commercial
 }
 
-# Control Tower account outputs
 output "management_account_id" {
   description = "Account ID for the management account (required for Control Tower)"
   value = try([
-    for id, config in var.aws_account_parameters : id
+    for id, config in(
+      length(var.all_accounts_all_parameters) > 0 ?
+      var.all_accounts_all_parameters :
+      var.organizations_account_parameters
+    ) : id
     if config.account_type == "management"
   ][0], null)
 }
@@ -71,7 +89,11 @@ output "management_account_id" {
 output "log_archive_account_id" {
   description = "Account ID for the log archive account (required for Control Tower)"
   value = try([
-    for id, config in var.aws_account_parameters : id
+    for id, config in(
+      length(var.all_accounts_all_parameters) > 0 ?
+      var.all_accounts_all_parameters :
+      var.organizations_account_parameters
+    ) : id
     if config.account_type == "log_archive"
   ][0], null)
 }
@@ -79,7 +101,11 @@ output "log_archive_account_id" {
 output "audit_account_id" {
   description = "Account ID for the audit account (required for Control Tower)"
   value = try([
-    for id, config in var.aws_account_parameters : id
+    for id, config in(
+      length(var.all_accounts_all_parameters) > 0 ?
+      var.all_accounts_all_parameters :
+      var.organizations_account_parameters
+    ) : id
     if config.account_type == "audit"
   ][0], null)
 }
@@ -87,7 +113,11 @@ output "audit_account_id" {
 output "account_role_mapping" {
   description = "Map of account names to their AccountType tags for use by SSO module"
   value = {
-    for account_id, config in var.aws_account_parameters : config.name => config.account_type
+    for account_id, config in(
+      length(var.all_accounts_all_parameters) > 0 ?
+      var.all_accounts_all_parameters :
+      var.organizations_account_parameters
+    ) : config.name => config.account_type
     if config.account_type != ""
   }
 }

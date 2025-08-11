@@ -9,15 +9,21 @@ output "global_tags" {
   value       = local.global_tags
 }
 
-# Organizations module inputs
-output "aws_account_parameters" {
-  description = "Processed account parameters for organizations module (original configuration)"
+
+output "all_accounts_all_parameters" {
+  description = "Complete account parameters for ALL accounts in the organization (for reporting/outputs)"
   value       = local.aws_account_parameters
 }
 
+
 output "organizations_account_parameters" {
-  description = "Account parameters optimized for organizations module with Control Tower integration"
+  description = "Account parameters for accounts managed by the Organizations module (resource management)"
   value       = local.organizations_account_parameters
+}
+
+output "control_tower_account_parameters" {
+  description = "Account parameters for accounts managed by Control Tower (empty when CT disabled)"
+  value       = var.control_tower_enabled ? local.control_tower_account_parameters : {}
 }
 
 output "organizational_units" {
@@ -25,7 +31,7 @@ output "organizational_units" {
   value       = local.organizational_units
 }
 
-# SSO module inputs  
+# SSO module inputs
 output "account_id_map" {
   description = "Map of account names to account IDs for SSO module"
   value       = local.account_id_map

@@ -44,68 +44,14 @@ locals {
   # Elements in each list must use the keys from local.aws_sso_groups
   # Each account type gets different groups based on its security and operational requirements per AWS SRA
   account_groups = {
-    # Core Foundation Accounts (Required by AWS SRA)
-    management = [
-      "aws_admin", # Management account requires full admin access for organization control
-    ]
-    log_archive = [
-      "aws_admin",         # Log management requires admin access
-      "aws_cyber_sec_eng", # Security engineers need access to logs
-      "aws_sec_auditor",   # Auditors need read access to logs
-    ]
-    audit = [
-      "aws_admin",         # Audit account management
-      "aws_cyber_sec_eng", # Security engineering oversight
-      "aws_sec_auditor",   # Primary auditing capabilities
-    ]
-
-    # Connectivity & Network Accounts
-    network = [
-      "aws_admin",         # Network admins need full access for infrastructure
-      "aws_cyber_sec_eng", # Security engineering for network controls
-      "aws_net_admin",     # Network administration for VPCs, TGW, etc.
-      "aws_power_user",    # General operations
-      "aws_sec_auditor",   # Security auditing capabilities
-      "aws_sys_admin",     # System administration for infrastructure
-    ]
-    shared_services = [
-      "aws_admin",         # Infrastructure management
-      "aws_cyber_sec_eng", # Security oversight
-      "aws_net_admin",     # Network connectivity
-      "aws_power_user",    # Service management
-      "aws_sys_admin",     # System administration
-    ]
-
-    # Security Accounts
-    security_tooling = [
-      "aws_admin",         # Security tools management
-      "aws_cyber_sec_eng", # Primary security engineering
-      "aws_sec_auditor",   # Security auditing and monitoring
-    ]
-    backup = [
-      "aws_admin",         # Backup management
-      "aws_cyber_sec_eng", # Security oversight
-      "aws_sys_admin",     # System administration
-    ]
-
-    # Workload Accounts (covers both prod and nonprod with appropriate oversight)
-    workload = [
-      "aws_power_user",    # Workload management capabilities
-      "aws_cyber_sec_eng", # Security oversight for all workloads
-      "aws_sec_auditor",   # Security monitoring and auditing
-      "aws_sys_admin",     # System administration
-    ]
-
-    # Future Account Types (for expansion)
-    deployment = [
-      "aws_power_user", # CI/CD pipeline management
-      "aws_sys_admin",  # System administration
-    ]
-    data = [
-      "aws_power_user",    # Data platform management
-      "aws_cyber_sec_eng", # Security oversight for data
-      "aws_sys_admin",     # System administration
-    ]
+    management       = ["aws_admin"]
+    log_archive      = ["aws_admin", "aws_cyber_sec_eng", "aws_sec_auditor"]
+    audit            = ["aws_admin", "aws_cyber_sec_eng", "aws_sec_auditor"]
+    network          = ["aws_admin", "aws_cyber_sec_eng", "aws_net_admin", "aws_power_user", "aws_sec_auditor", "aws_sys_admin"]
+    shared_services  = ["aws_admin", "aws_cyber_sec_eng", "aws_net_admin", "aws_power_user", "aws_sys_admin"]
+    security_tooling = ["aws_admin", "aws_cyber_sec_eng", "aws_sec_auditor"]
+    backup           = ["aws_admin", "aws_cyber_sec_eng", "aws_sys_admin"]
+    workload         = ["aws_admin", "aws_power_user", "aws_cyber_sec_eng", "aws_sec_auditor", "aws_sys_admin"]
   }
 
   # This transforms the account_id_map into a structure that includes which groups

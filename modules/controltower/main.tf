@@ -2,6 +2,19 @@ data "aws_partition" "current" {}
 data "aws_caller_identity" "current" {}
 data "aws_organizations_organization" "current" {}
 
+# Get tags for the required accounts to validate they have correct AccountType tags
+data "aws_organizations_resource_tags" "management" {
+  resource_id = var.management_account_id
+}
+
+data "aws_organizations_resource_tags" "log_archive" {
+  resource_id = var.log_archive_account_id
+}
+
+data "aws_organizations_resource_tags" "audit" {
+  resource_id = var.audit_account_id
+}
+
 # Load AWS Security Reference Architecture (SRA) Account Types from YAML
 # These match accreditation requirements and cannot be changed
 locals {
@@ -9,6 +22,28 @@ locals {
 
   # Extract just the account type names for validation
   valid_account_types = keys(local.sra_account_types)
+}
+
+# Validation checks for account types using OpenTofu check blocks
+check "management_account_type" {
+  assert {
+    condition     = lookup(data.aws_organizations_resource_tags.management.tags, "AccountType", "") == "management"
+    error_message = "Management account ${var.management_account_id} must have AccountType tag set to 'management', but found: '${lookup(data.aws_organizations_resource_tags.management.tags, "AccountType", "MISSING")}'"
+  }
+}
+
+check "log_archive_account_type" {
+  assert {
+    condition     = lookup(data.aws_organizations_resource_tags.log_archive.tags, "AccountType", "") == "log_archive"
+    error_message = "Log archive account ${var.log_archive_account_id} must have AccountType tag set to 'log_archive', but found: '${lookup(data.aws_organizations_resource_tags.log_archive.tags, "AccountType", "MISSING")}'"
+  }
+}
+
+check "audit_account_type" {
+  assert {
+    condition     = lookup(data.aws_organizations_resource_tags.audit.tags, "AccountType", "") == "audit"
+    error_message = "Audit account ${var.audit_account_id} must have AccountType tag set to 'audit', but found: '${lookup(data.aws_organizations_resource_tags.audit.tags, "AccountType", "MISSING")}'"
+  }
 }
 
 ###############################################################################

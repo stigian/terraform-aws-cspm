@@ -72,12 +72,12 @@ variable "self_managed_sso" {
 variable "additional_kms_key_admin_arns" {
   description = <<-EOT
     Optional list of additional IAM ARNs that will be granted KMS key administrative permissions.
-    
+
     Use this to grant KMS admin access to specific users, roles, or external accounts beyond the default admins:
     - Current Terraform caller
     - SSO Administrator roles
     - Project-specific admin roles
-    
+
     Example: ["arn:aws-us-gov:iam::123456789012:user/admin", "arn:aws-us-gov:iam::123456789012:role/SecurityTeam"]
   EOT
   type        = list(string)

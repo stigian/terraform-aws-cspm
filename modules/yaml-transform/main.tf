@@ -106,16 +106,14 @@ locals {
   }
 
   # Split accounts based on whether they'll be placed in Control Tower-managed OUs
-  # Accounts going to Control Tower OUs should be left at Root initially
-  # Control Tower will move them to the correct OU during landing zone deployment
-  control_tower_managed_accounts = {
+  # Organizations module should NOT manage accounts destined for Control Tower OUs
+  control_tower_account_parameters = {
     for account_id, account_data in local.aws_account_parameters :
-    account_id => merge(account_data, {
-      ou = "Root" # Override OU placement - Control Tower will handle it
-    })
+    account_id => account_data
     if contains(local.control_tower_managed_ous, account_data.ou)
   }
 
+  # Organizations module only manages accounts going to manually-managed OUs
   organizations_managed_accounts = {
     for account_id, account_data in local.aws_account_parameters :
     account_id => account_data

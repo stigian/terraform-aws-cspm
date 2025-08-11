@@ -50,13 +50,19 @@ variable "aws_organization_id" {
   default     = null
 }
 
+variable "enable_runtime_validation" {
+  description = "Enable runtime validation checks that query AWS APIs. Set to false for synthetic testing to avoid requiring real AWS resources."
+  type        = bool
+  default     = true
+}
+
 variable "organizational_units" {
   description = <<-EOT
     Map of Organizational Unit (OU) names to their attributes.
-    
+
     Uses AWS Security Reference Architecture (SRA) standard OUs by default:
     - Security: For audit, log archive, and security tooling accounts
-    - Infrastructure_Prod/NonProd: For network and shared services accounts  
+    - Infrastructure_Prod/NonProd: For network and shared services accounts
     - Workloads_Prod/NonProd: For application workload accounts
     - Sandbox: For experimentation and development
     - Policy_Staging: For testing organizational policies
@@ -105,9 +111,10 @@ variable "organizational_units" {
   }
 }
 
-variable "aws_account_parameters" {
+# Accounts the Organizations module will actively manage (resource creation/placement)
+variable "organizations_account_parameters" {
   description = <<-EOT
-    Map of AWS account parameters to be managed by the module.
+    Accounts managed by the Organizations module (resource creation/moves).
 
     PREREQUISITE: All accounts must already exist (created via AWS Organizations CLI).
 
@@ -122,19 +129,7 @@ variable "aws_account_parameters" {
         }
       }
 
-    **CONTROL TOWER ACCOUNT PLACEMENT:**
-    When control_tower_enabled = true:
-    - Accounts with ou = "Security" or ou = "Sandbox" are placed at "Root" initially
-    - Control Tower landing zone will move them to the proper Control Tower-managed OUs
-    - Other accounts are placed in organizations-managed OUs normally
-    - Required account types: management, log_archive, audit (see validation below)
-
-    When control_tower_enabled = false:
-    - All accounts are placed in their specified OUs directly
-    - No Control Tower constraints or account type requirements
-
-    See config/account-schema.yaml for detailed field definitions and examples.
-    See config/sra-account-types.yaml for valid account_type values.
+    With Control Tower enabled, exclude CT-managed core accounts (management, log_archive, audit) if CT manages them.
   EOT
   type = map(object({
     name            = string
@@ -147,32 +142,41 @@ variable "aws_account_parameters" {
 
   # Core validation - keep it simple
   validation {
-    condition     = alltrue([for k in keys(var.aws_account_parameters) : can(regex("^[0-9]{12}$", k))])
+    condition     = alltrue([for k in keys(var.organizations_account_parameters) : can(regex("^[0-9]{12}$", k))])
     error_message = "Account IDs must be exactly 12 digits."
   }
 
   validation {
-    condition     = alltrue([for v in values(var.aws_account_parameters) : can(regex("^\\S+@\\S+\\.\\S+$", v.email))])
+    condition     = alltrue([for v in values(var.organizations_account_parameters) : can(regex("^\\S+@\\S+\\.\\S+$", v.email))])
     error_message = "Each account must have a valid email address."
   }
 
   validation {
-    condition     = length(values(var.aws_account_parameters)[*].name) == length(distinct(values(var.aws_account_parameters)[*].name))
+    condition     = length(values(var.organizations_account_parameters)[*].name) == length(distinct(values(var.organizations_account_parameters)[*].name))
     error_message = "Account names must be unique."
   }
 
   validation {
-    condition     = alltrue([for v in values(var.aws_account_parameters) : contains(["prod", "nonprod"], v.lifecycle)])
+    condition     = alltrue([for v in values(var.organizations_account_parameters) : contains(["prod", "nonprod"], v.lifecycle)])
     error_message = "Account lifecycle must be 'prod' or 'nonprod'."
   }
+}
 
-  # Control Tower validation - only when enabled
-  validation {
-    condition = !var.control_tower_enabled || alltrue([
-      # When Control Tower is enabled, only require management account in Organizations module
-      # audit and log_archive accounts are managed directly by Control Tower
-      length([for v in values(var.aws_account_parameters) : v if v.account_type == "management"]) >= 1,
-    ])
-    error_message = "When Control Tower is enabled, Organizations module requires at least a management account. Audit and log_archive accounts are managed by Control Tower module."
-  }
+# Complete set of accounts in the org for reporting/outputs
+variable "all_accounts_all_parameters" {
+  description = <<-EOT
+    Complete map of ALL AWS accounts in the organization (managed by either Organizations or Control Tower).
+
+    Used for comprehensive outputs (like account_id_map) that need to show all accounts.
+  EOT
+  type = map(object({
+    name            = string
+    email           = string
+    ou              = string
+    lifecycle       = string
+    account_type    = optional(string, "")
+    create_govcloud = optional(bool, false)
+  }))
+
+  default = {}
 }
