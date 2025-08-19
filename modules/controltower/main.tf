@@ -96,9 +96,13 @@ resource "aws_iam_role_policy" "controltower_admin" {
   })
 }
 
+data "aws_iam_policy" "controltower_admin" {
+  name = "AWSControlTowerServiceRolePolicy"
+}
+
 resource "aws_iam_role_policy_attachment" "controltower_admin" {
   role       = aws_iam_role.controltower_admin.name
-  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWSControlTowerServiceRolePolicy"
+  policy_arn = data.aws_iam_policy.controltower_admin.arn
 }
 
 resource "aws_iam_role" "controltower_cloudtrail" {
