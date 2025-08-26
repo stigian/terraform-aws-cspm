@@ -26,3 +26,14 @@ output "account_id_map" {
   description = "Map of account names to account IDs"
   value       = module.organizations.account_id_map
 }
+
+# Security Services Status
+output "guardduty_status" {
+  description = "Comprehensive GuardDuty organization configuration and compliance status"
+  value       = module.guardduty.guardduty_status
+}
+
+output "detective_status" {
+  description = "Comprehensive Detective organization configuration and compliance status"
+  value       = module.detective.detective_status
+}
