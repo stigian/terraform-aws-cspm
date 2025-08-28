@@ -12,125 +12,6 @@ resource "aws_organizations_delegated_administrator" "config_multiaccountsetup" 
   service_principal = "config-multiaccountsetup.amazonaws.com"
 }
 
-resource "aws_kms_key" "key" {
-  provider            = aws.audit
-  description         = "KMS key for AWS Config aggregator"
-  enable_key_rotation = true
-  tags                = var.global_tags
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "AllowAuditAccountKeyManagement"
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:${data.aws_partition.current.partition}:iam::${var.audit_account_id}:root"
-        }
-        Action = [
-          "kms:*"
-        ]
-        Resource = "*"
-      },
-      {
-        Sid       = "AllowOrgDecrypt"
-        Effect    = "Allow"
-        Principal = { AWS = "*" }
-        Action = [
-          "kms:Decrypt",
-          "kms:GenerateDataKey",
-        ]
-        Resource = "*"
-        Condition = {
-          StringEquals = {
-            "AWS:SourceOrgID" = var.organization_id
-          }
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_kms_alias" "key_alias" {
-  provider      = aws.audit
-  name          = "alias/cnscca-org-config-aggregator"
-  target_key_id = aws_kms_key.key.key_id
-}
-
-resource "aws_s3_bucket" "delivery" {
-  provider      = aws.audit
-  bucket        = "cnscca-org-config-aggregator-${var.audit_account_id}"
-  tags          = var.global_tags
-  force_destroy = false
-}
-
-resource "aws_s3_bucket_policy" "bucket_policy" {
-  provider = aws.audit
-  bucket   = aws_s3_bucket.delivery.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid       = "AWSConfigBucketPermissionsCheck"
-        Effect    = "Allow"
-        Principal = { Service = "config.amazonaws.com" }
-        Action    = "s3:GetBucketAcl"
-        Resource  = aws_s3_bucket.delivery.arn
-        Condition = {
-          StringEquals = { "AWS:SourceOrgID" = var.organization_id }
-        }
-      },
-      {
-        Sid       = "AWSConfigBucketExistenceCheck"
-        Effect    = "Allow"
-        Principal = { Service = "config.amazonaws.com" }
-        Action    = "s3:ListBucket"
-        Resource  = aws_s3_bucket.delivery.arn
-        Condition = {
-          StringEquals = { "AWS:SourceOrgID" = var.organization_id }
-        }
-      },
-      {
-        Sid       = "AWSConfigBucketDelivery"
-        Effect    = "Allow"
-        Principal = { Service = "config.amazonaws.com" }
-        Action    = "s3:PutObject"
-        Resource  = "${aws_s3_bucket.delivery.arn}/*"
-        Condition = {
-          StringEquals = {
-            "s3:x-amz-acl"    = "bucket-owner-full-control"
-            "AWS:SourceOrgID" = var.organization_id
-          }
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "delivery" {
-  provider = aws.audit
-  bucket   = aws_s3_bucket.delivery.id
-
-  rule {
-    id     = "OMB-M-21-31"
-    status = "Enabled"
-    transition {
-      days          = 30
-      storage_class = "STANDARD_IA"
-    }
-
-    transition {
-      days          = 60
-      storage_class = "GLACIER_IR"
-    }
-    expiration {
-      days = 913
-    }
-
-    filter {}
-  }
-}
-
 resource "aws_iam_role" "aggregator" {
   provider = aws.audit
   name     = "AWSConfigAggregatorRole"
@@ -168,3 +49,34 @@ resource "aws_config_configuration_aggregator" "org" {
     aws_organizations_delegated_administrator.config_multiaccountsetup,
   ]
 }
+
+/*
+** TODO: finish stub below to enable Config recording in the management account
+**       and delivery to the Control Tower bucket in the logging account. The
+**       Landing Zone configuration of Control Tower makes this very annoying.
+**       Getting the right KMS and bucket permissions is critical to getting
+**       the delivery channel created successfully.
+** See: https://repost.aws/questions/QUF9Umvk9aTkyL78HJJ-vYRg/enabling-aws-configuration-on-control-tower-main-account
+
+resource "aws_iam_service_linked_role" "config" {
+  provider          = aws.management
+  aws_service_name  = "config.amazonaws.com"
+}
+
+resource "aws_config_configuration_recorder" "mgmt" {
+  name     = "cnscca-org-mgmt-recorder"
+  role_arn = aws_iam_service_linked_role.config.arn
+}
+
+resource "aws_config_configuration_recorder_status" "mgmt" {
+  name       = aws_config_configuration_recorder.mgmt.name
+  is_enabled = true
+  depends_on = [aws_config_delivery_channel.mgmt]
+}
+
+resource "aws_config_delivery_channel" "mgmt" {
+  name           = "cnscca-org-mgmt-delivery-channel"
+  s3_bucket_name = var.ct_logs_bucket_name
+  depends_on     = [aws_config_configuration_recorder.mgmt]
+}
+*/

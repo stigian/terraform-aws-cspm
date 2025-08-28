@@ -24,3 +24,8 @@ variable "kms_key_alias" {
   default     = "cnscca-org-config-key"
   description = "The alias for the KMS key used for S3 bucket encryption."
 }
+
+variable "ct_logs_bucket_name" {
+  type        = string
+  description = "The S3 bucket name for the existing Control Tower logs bucket. The Landing Zone deploy creates this in the log_archive account with a name like aws-controltower-logs-<log_account_id>-<region>"
+}

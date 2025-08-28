@@ -1,6 +1,4 @@
-output "bucket_name" {
-  value = aws_s3_bucket.delivery.id
-}
-output "kms_key_arn" {
-  value = aws_kms_key.key.arn
-}
+# output "config_aggregator_arn" {
+#   description = "The ARN of the new non-CT AWS Config aggregator."
+#   value       = aws_config_configuration_aggregator.org.arn
+# }
