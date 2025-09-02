@@ -6,10 +6,8 @@ terraform {
       source  = "hashicorp/aws"
       version = ">= 5.0.0"
       configuration_aliases = [
-        aws.log,
         aws.audit,
-        aws.management,
-        aws.hubandspoke,
+        aws.management
       ]
     }
   }
