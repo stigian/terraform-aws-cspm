@@ -2,12 +2,6 @@ locals {
   # TODO: add view only role to sso and entra
   # TODO: incorporate PIM for Global Administrator and AWS Administrator
 
-  # Group ownership - conditionally include Entra admins
-  group_owners = var.enable_entra_integration ? concat(
-    [data.azuread_client_config.current[0].object_id],
-    var.entra_group_admin_object_ids
-  ) : []
-
   # Combine existing admin user (if provided) with new users to create
   all_admin_users = var.initial_admin_users
 
@@ -106,43 +100,6 @@ locals {
       display_name       = "${var.project}-AwsSysAdmin"
       description        = "Grants full access permissions necessary for resources required for application and development operations."
       managed_policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/job-function/SystemAdministrator"
-    }
-  }
-
-  # These groups are for managing Entra ID administrative roles and permissions
-  # Only created when enable_entra_integration is true
-  entra_security_groups = {
-    entra_app_admin = {
-      display_name = "EntraAppAdmin"
-      description  = "Application Administrator"
-    }
-    entra_auth_policy_admin = {
-      display_name = "EntraAuthPolicyAdmin"
-      description  = "Authentication Policy Administrator"
-    }
-    entra_cond_access_admin = {
-      display_name = "EntraCondAccessAdmin"
-      description  = "Conditional Access Administrator"
-    }
-    entra_dir_reader = {
-      display_name = "EntraDirReader"
-      description  = "Directory Reader"
-    }
-    entra_global_admin = {
-      display_name = "EntraGlobalAdmin"
-      description  = "Global Administrator"
-    }
-    entra_groups_admin = {
-      display_name = "EntraGroupsAdmin"
-      description  = "Groups Administrator"
-    }
-    entra_priv_role_admin = {
-      display_name = "EntraPrivRoleAdmin"
-      description  = "Privileged Role Administrator"
-    }
-    entra_sec_reader = {
-      display_name = "EntraSecReader"
-      description  = "Security Reader"
     }
   }
 }
