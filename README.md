@@ -1,232 +1,218 @@
 # CNSCCA-CSPM
 
-This OpenTofu module configures Cloud Security Posture Management (CSPM) aligned with **DISA Secure Cloud Computing Architecture (SCCA)** requirements for DoD Zero Trust environments. The design implements AWS Control Tower Landing Zone baseline version 3.3 as the foundation, with additional modular components for Organizations management and IAM Identity Center (SSO) integration.
+**DoD Zero Trust CSPM** - Modular OpenTofu implementation of **DISA Secure Cloud Computing Architecture (SCCA)** with cross-account security services for AWS multi-account environments.
 
 **Key Features:**
-- **DISA SCCA Compliance**: Implements Virtual Data Center Security Stack (VDSS) requirements
-- **Simple User Experience**: Clear separation between configuration and module implementation
-- **Modular Architecture**: Separate organizations and SSO modules for flexible deployment
-- **AWS SRA Fallback**: Follows AWS Security Reference Architecture patterns when SCCA is insufficient
-- **GovCloud Support**: Automatic detection and handling of AWS GovCloud partition differences
-- **Multi-Partition**: Supports commercial AWS and AWS GovCloud partitions
+- **DISA SCCA Compliance**: Virtual Data Center Security Stack (VDSS) implementation
+- **Modular Architecture**: Specialized modules for flexible security deployment
+- **Cross-Account Security**: Centralized monitoring from audit account across all accounts
+- **YAML Configuration**: Simplified account and OU management through declarative config
+- **AWS SRA Alignment**: Security Reference Architecture patterns with SCCA enhancements
 
-## DISA SCCA Security Architecture
+## Modular Security Architecture
 
-This module implements a **layered security architecture** that aligns with DISA SCCA component requirements, using Control Tower as the foundational security baseline:
+This implementation provides **8 specialized modules** that work together to create a comprehensive DISA SCCA-compliant security posture:
 
-### 🛡️ **Virtual Data Center Security Stack (VDSS) - Core Security**
+### **Foundation Modules (Required)**
 
-Control Tower provides the foundational security controls, enhanced with SCCA-compliant security services:
+| Module | Status | Purpose | Key Features |
+|--------|--------|---------|--------------|
+| **organizations** | ✅ Complete | Multi-account structure, OU management | AWS SRA OUs, account placement, Control Tower integration |
+| **sso** | ✅ Complete | Centralized identity & access control | Permission sets, account assignments, external IdP support |
+| **controltower** | ✅ Complete | Governance & compliance baseline | Landing zone, guardrails, security baseline |
+
+### **Security Services (Cross-Account)**
+
+| Module | Status | Purpose | DISA SCCA Alignment |
+|--------|--------|---------|-------------------|
+| **guardduty** | ✅ Production | Threat detection & monitoring | VDSS requirement 2.1.2.6 |
+| **detective** | ✅ Production | Security investigation & analysis | Enhanced incident response |
+| **securityhub** | ✅ Production | Centralized security findings | VDSS monitoring consolidation |
+| **awsconfig** | ✅ Production | Configuration compliance & drift | VDSS compliance monitoring |
+| **inspector2** | � Planned | Vulnerability assessment | Continuous security assessment |
+
+### **Architecture Pattern: Audit Account as Security Hub**
+
+All security services use the **audit account as delegated administrator**, providing:
 
 ```
-Security OU (SCCA VDSS & VDMS Core):
-├── Management Account - Organization control, TCCM integration point
-├── Log Archive Account - Centralized logging
-└── Audit Account - VDSS monitoring, threat detection (GuardDuty, Security Hub, etc.)
+┌─── Cross-Account Security Services ────────────────────┐
+│                                                        │
+│ Audit Account (Delegated Administrator)               │
+│ ├── GuardDuty Organization Admin                       │
+│ ├── Detective Behavior Graph                           │
+│ ├── Security Hub Central Configuration                 │
+│ ├── Config Organization Admin                          │
+│ └── [Future] Inspector2 Organization Admin             │
+│                                                        │
+│         ▼ Automatic Enrollment ▼                       │
+│                                                        │
+│ All Organization Member Accounts                       │
+│ ├── Auto-enabled security services                     │
+│ ├── Findings forwarded to audit account                │
+│ └── Centralized compliance monitoring                  │
+│                                                        │
+└────────────────────────────────────────────────────────┘
 ```
 
-**SCCA Foundation Provides:**
-- ✅ **VDSS Monitoring**: GuardDuty threat detection per SCCA requirement 2.1.2.6
-- ✅ **Security Information Capture**: CloudWatch logging per SCCA requirement 2.1.2.11
-- ✅ **Centralized Archival**: Log aggregation per SCCA requirement 2.1.2.12
-- ✅ **Detective Controls**: Continuous compliance monitoring via Config rules
-- ✅ **Security Baseline**: IAM roles, policies, and security foundations
+## Configuration Strategy
 
-### 🔧 **Tier 2: Your Managed Accounts (Flexible Security)**
+### YAML-Based Account Management
 
-For accounts in **your** OUs (Infrastructure, Workloads), you get **complete control** over security services:
+Accounts and organizational units are managed through **declarative YAML configuration** files in `examples/config/`:
 
 ```
-Your OUs (Organizations Module Managed):
-├── Infrastructure OU - Network, shared services accounts
-├── Workloads OU - Production and non-production applications
-└── Custom OUs - Any additional organizational structure you need
+examples/config/
+├── accounts/
+│   ├── foundation.yaml    # Management account
+│   ├── security.yaml      # Log archive, audit accounts
+│   ├── infrastructure.yaml # Network, shared services
+│   └── workloads.yaml     # Application accounts
+├── organizational-units/
+│   └── custom-ous.yaml    # Additional OUs beyond AWS SRA
+└── sso/
+    └── groups.yaml        # SSO groups and assignments
 ```
 
-**You Can Add:**
-- 🔧 **Enhanced Threat Detection**: GuardDuty, Inspector across all accounts
-- 🔧 **Custom Compliance**: Additional Config rules beyond Control Tower baseline
-- 🔧 **Security Aggregation**: Security Hub for centralized findings
-- 🔧 **Workload Security**: Application-specific controls and monitoring
+**Example Account Definition:**
+```yaml
+# examples/config/accounts/security.yaml
+audit_account:
+  account_id: "123456789012"
+  account_name: "YourOrg-Security-Audit"
+  email: "aws-audit@yourorg.com"
+  account_type: audit
+  ou: Security
+  lifecycle: prod
+  additional_tags:
+    Owner: "Security Team"
+    Purpose: "Security Audit & Compliance"
+```
 
-### 🎯 **Perfect Division of Responsibilities**
+### Module Integration Pattern
 
-| Component | Control Tower Handles | You Handle |
-|-----------|----------------------|------------|
-| **Core Accounts** | Security baseline, audit trail, mandatory compliance | Enhanced monitoring, custom rules |
-| **Workload Accounts** | Basic guardrails | Full security stack, application controls |
-| **Organizational Structure** | Security & Sandbox OUs | Infrastructure, Workloads, custom OUs |
-| **Access Management** | Service roles (when SSO disabled) | User access, permission sets, SAML integration |
+The `examples/main.tf` demonstrates the integration pattern:
 
-### 💪 **Key Benefits**
+```hcl
+# Foundation
+module "organizations" { ... }
+module "controltower" { ... }
+module "sso" { ... }
 
-- **🔒 Unbreakable Foundation**: Critical accounts protected by Control Tower's mandatory controls
-- **⚡ Operational Flexibility**: Full control over workload account security configuration
-- **📊 Compliance Simplified**: DISA SCCA baseline + enhanced services for specific requirements
-- **💰 Cost Optimized**: Pay only for enhanced services where needed, not across all accounts
-- **🔍 Centralized Visibility**: All security findings flow to the audit account for unified monitoring
-
-This architecture ensures your **most sensitive accounts** (management, logging, audit) have maximum protection while giving you complete flexibility to tailor security for your **workload accounts** based on specific application needs.
+# Security Services (depend on foundation)
+module "guardduty" { ... }
+module "detective" { ... }
+module "securityhub" { ... }
+module "awsconfig" { ... }
+```
+- Be consistent across your organization
 
 ## Quick Start
 
-**PREREQUISITE**: AWS accounts must be created FIRST via AWS Organizations CLI
+### Prerequisites
+- **AWS CLI**: Account creation via Organizations CLI (accounts must exist before Terraform management)
+- **OpenTofu 1.6+**: This is an OpenTofu project (not Terraform)
+- **AWS Profiles**: Management account access with OrganizationFullAccess
+- **Account IDs**: Collect account IDs from CLI creation for configuration
 
-**Your main job:** Create accounts via CLI, then define them in Terraform. The modules handle all the AWS SRA compliance automatically.
-
-### Step 1: Create AWS Accounts (CLI)
-
-Before using this module, create your AWS accounts using the AWS Organizations CLI:
+### Step 1: Create AWS Accounts (Required First)
 
 ```bash
-# Example: Create Control Tower required accounts with good naming convention
-aws organizations create-gov-cloud-account \
-  --account-name "YourOrg-Management" \
-  --email "aws-management@yourorg.com"
-
-aws organizations create-gov-cloud-account \
-  --account-name "YourOrg-Security-LogArchive" \
-  --email "aws-logs@yourorg.com"
-
-aws organizations create-gov-cloud-account \
-  --account-name "YourOrg-Security-Audit" \
+# GovCloud (most common for DoD environments)
+aws organizations create-gov-cloud-account
+  --account-name "YourOrg-Security-Audit"
   --email "aws-audit@yourorg.com"
+  --profile your-management-profile
 
-# Continue for additional accounts as needed...
+# Commercial AWS
+aws organizations create-account
+  --account-name "YourOrg-Workloads-App1"
+  --email "aws-app1@yourorg.com"
+  --profile your-management-profile
 ```
 
-**Recommended Naming Convention**: `{YourOrg}-{Function}-{Environment}`
-- Examples: "ACME-Security-Audit", "ACME-Workload-Prod1"
-- Keep names short (AWS has length limits)
-- Be consistent across your organization
+### Step 2: Configure Accounts in YAML
 
-### Step 2: Configure in Terraform
+```bash
+# Copy example configuration
+cp -r examples/config /path/to/your/deployment/
 
-Configure your AWS credentials for the **management account**, then define your existing accounts using EXACT names and emails from CLI creation:
-
-```hcl
-# Configure AWS provider for management account
-provider "aws" {
-  region = "us-gov-west-1" # or us-east-1 for commercial
-
-  # Option 1: Use AWS_PROFILE (recommended)
-  # export AWS_PROFILE=your-management-account-profile
-
-  # Option 2: Assume role (if needed)
-  # assume_role {
-  #   role_arn = "arn:aws:iam::MGMT-ACCOUNT-ID:role/OrganizationAccountAccessRole"
-  # }
-}
-
-variable "aws_account_parameters" {
-  default = {
-    # REQUIRED: Control Tower Management Account
-    "123456789012" = {
-      name      = "YourOrg-Management"         # EXACT match from CLI
-      email     = "aws-mgmt@yourorg.com"       # EXACT match from CLI
-      ou        = "Root"                       # REQUIRED: Management in Root
-      lifecycle = "prod"
-      tags      = { AccountType = "management" } # REQUIRED: Must be "management"
-    }
-    # REQUIRED: Control Tower Log Archive Account
-    "234567890123" = {
-      name      = "YourOrg-Security-LogArchive"
-      email     = "aws-logs@yourorg.com"
-      ou        = "Security"                   # REQUIRED: Log Archive in Security
-      lifecycle = "prod"
-      tags      = { AccountType = "log_archive" } # REQUIRED: Must be "log_archive"
-    }
-    # REQUIRED: Control Tower Audit Account
-    "345678901234" = {
-      name      = "YourOrg-Security-Audit"
-      email     = "aws-audit@yourorg.com"
-      ou        = "Security"                   # REQUIRED: Audit in Security
-      lifecycle = "prod"
-      tags      = { AccountType = "audit" }       # REQUIRED: Must be "audit"
-    }
-  }
-}
-
-module "organizations" {
-  source = "./modules/organizations"
-
-  aws_account_parameters = var.aws_account_parameters
-  project               = "your-organization"
-}
+# Edit account files with your actual account IDs and details
+vim config/accounts/security.yaml
+vim config/accounts/workloads.yaml
 ```
 
-### Available OUs
+### Step 3: Deploy Foundation Services
 
-The module creates these AWS SRA-compliant OUs automatically:
+```bash
+cd /path/to/your/deployment
+tofu plan
+tofu apply
 
-| OU Name | Purpose | Lifecycle | Typical Accounts |
-|---------|---------|-----------|------------------|
-| `Root` | Management account only | `prod` | Management account |
-| `Security` | Security & compliance | `prod` | Audit, Log Archive |
-| `Infrastructure_Prod` | Production infrastructure | `prod` | Network Hub |
-| `Infrastructure_Test` | Test infrastructure | `nonprod` | Network Test |
-| `Workloads_Prod` | Production workloads | `prod` | Production apps |
-| `Workloads_Test` | Test workloads | `nonprod` | Dev, staging apps |
-| `Sandbox` | Experimental accounts | `nonprod` | Developer sandboxes |
-| `Policy_Staging` | Policy testing | `nonprod` | Policy validation |
-| `Suspended` | Suspended accounts | `nonprod` | Temporarily suspended |
+# Foundation modules deploy first:
+# 1. Organizations (account placement, OUs)
+# 2. Control Tower (landing zone, guardrails)
+# 3. SSO (identity and access management)
+```
 
-### What You Control vs Module Automation
+### Step 4: Enable Security Services
 
-**Your Responsibilities:**
-- Create accounts via AWS CLI first
-- Define account-to-OU mapping in Terraform variables
-- Choose project name and tagging strategy
+Security services automatically deploy after foundation completion:
+- **GuardDuty**: Organization-wide threat detection
+- **Detective**: Security investigation capabilities
+- **Security Hub**: Centralized security findings
+- **Config**: Configuration compliance monitoring
 
-**Module Handles Automatically:**
-- Creates AWS SRA-compliant OU structure
-- Places accounts in specified OUs
-- Validates account configurations
-- Provides clean outputs for SSO/Control Tower integration
-- Follows AWS Security Reference Architecture patterns
+## Documentation Structure
 
-## Service Configuration
+**Role-Based Documentation** in `/docs/by_persona/`:
 
-Additional services are delegated, activated, and configured across the entire AWS Organization including:
+| Role | Documentation | Purpose |
+|------|---------------|---------|
+| **Administrator** | [administrator.md](docs/by_persona/administrator.md) | Setup, deployment, configuration management |
+| **Operations** | [operations.md](docs/by_persona/operations.md) | Daily operations, account management, monitoring |
+| **Security Team** | [security-team.md](docs/by_persona/security-team.md) | Security architecture, incident response, compliance |
 
-- **AWS Organizations**: Organizational Units (OUs) following AWS SRA structure
-- **IAM Identity Center**: Persona-based access control with group assignments
-- GuardDuty
-- Detective
-- Inspector
-- Security Hub
-- Config
-- CloudTrail
+## Current Implementation Status
 
-[AWS Security Services Best Practices](https://aws.github.io/aws-security-services-best-practices/) serves as a guide for the default configuration. Configurations for non-security services like AWS Config are also included to ensure compliance with the DoD Zero Trust strategy.
+### ✅ **Production Ready (Fully Implemented)**
 
-# Service Descriptions
+- **organizations**: Complete multi-account structure with AWS SRA OUs
+- **controltower**: Landing zone with guardrails and security baseline
+- **sso**: Role-based access control with external IdP integration
+- **guardduty**: Organization-wide threat detection with all protection plans
+- **detective**: Security investigation graphs with 30-day retention
+- **securityhub**: Centralized security findings with configuration policies
+- **awsconfig**: Configuration compliance monitoring across all accounts
 
-## GuardDuty
+### 🚧 **Planned Enhancements**
 
-Amazon GuardDuty is a threat detection service that continuously monitors for malicious activity and unauthorized behavior to protect your AWS accounts and workloads. GuardDuty is enabled in all accounts in the AWS Organization. The audit account is the master account for GuardDuty. Member accounts are enabled and configured to send findings to the master account.
+- **inspector2**: Vulnerability assessment and container scanning
+- **logging**: Centralized logging module (currently handled by Control Tower)
+- Enhanced security automation and response capabilities
 
-## Detective
+## Module Dependencies and Deployment Order
 
-Amazon Detective makes it easy to analyze, investigate, and quickly identify the root cause of security findings or suspicious activities. Detective automatically collects log data from your AWS resources and uses machine learning, statistical analysis, and graph theory to help you visualize and conduct faster and more efficient security investigations.
+The modules have clear dependencies that ensure proper deployment sequencing:
 
+```
+Foundation Layer:
+├── organizations (account placement, OU structure)
+├── controltower (governance baseline, depends on organizations)
+└── sso (identity management, depends on organizations)
 
-## Inspector
+Security Services Layer:
+├── guardduty (depends on controltower)
+├── detective (depends on guardduty)
+├── securityhub (depends on guardduty)
+└── awsconfig (depends on controltower)
+```
 
-Amazon Inspector is a vulnerability management service that continuously monitors your AWS workloads for software vulnerabilities and unintended network exposure. Amazon Inspector automatically discovers and scans running Amazon EC2 instances, container images in Amazon Elastic Container Registry (Amazon ECR), and AWS Lambda functions.
-
-
-## Security Hub
-
-AWS Security Hub provides you with a comprehensive view of your security state within AWS and helps you check your environment against security industry standards and best practices. Security Hub is enabled in all accounts in the AWS Organization. The audit account is the master account for Security Hub. Member accounts are enabled and configured to send findings to the master account.
-
-## Config
-
-AWS Config provides a detailed view of the resources associated with your AWS account, including how they are configured, how they are related to one another, and how the configurations and their relationships have changed over time. AWS Config resources provisioned by AWS Control Tower are tagged automatically with `aws-control-tower` and a value of `managed-by-control-tower`.
-
-## CloudTrail
-
-AWS Control Tower configures AWS CloudTrail to enable centralized logging and auditing for all accounts. With CloudTrail, the management account can review administrative actions and lifecycle events for member accounts.
+All security services automatically:
+- Use audit account as delegated administrator
+- Enable organization-wide with auto-enrollment
+- Forward findings to centralized audit account
+- Follow DISA SCCA and AWS SRA best practices
 
 
 ## IAM Identity Center
@@ -360,38 +346,72 @@ For detailed examples, see:
 
 ## AWS GovCloud Account Creation
 
-For AWS GovCloud deployments, create accounts using the AWS CLI or API. **All accounts must exist before running this module.**
+## Getting Started
 
-### Example: Creating GovCloud Accounts via CLI
+For detailed setup and operational guidance, see the **role-based documentation**:
 
-```bash
-# Set your management account profile
-export AWS_PROFILE=your-govcloud-management-profile
+### 📋 [Administrator Guide](docs/by_persona/administrator.md)
+**Setup, deployment, and configuration management**
+- Prerequisites and account creation workflow
+- Initial deployment procedures
+- Configuration management patterns
+- Provider setup and authentication
 
-# Create log archive account
-aws organizations create-account \
-  --email "log-archive@your-organization.gov" \
-  --account-name "Security Log Archive" \
-  --region us-gov-west-1
+### 🔧 [Operations Guide](docs/by_persona/operations.md)
+**Daily operations and maintenance**
+- Account management procedures
+- Adding accounts and OUs
+- Security monitoring workflows
+- Emergency procedures and troubleshooting
 
-# Create audit account
-aws organizations create-account \
-  --email "audit@your-organization.gov" \
-  --account-name "Security Audit" \
-  --region us-gov-west-1
+### 🛡️ [Security Team Guide](docs/by_persona/security-team.md)
+**Security architecture and incident response**
+- Security service overview and status
+- Incident response procedures
+- Compliance monitoring and reporting
+- Security service configuration
 
-# Create network account
-aws organizations create-account \
-  --email "network@your-organization.gov" \
-  --account-name "Infrastructure Network" \
-  --region us-gov-west-1
+## Module References
+
+| Module | Purpose | README | Status |
+|--------|---------|--------|--------|
+| **organizations** | Multi-account structure, AWS SRA OUs | [📖](modules/organizations/README.md) | ✅ Complete |
+| **controltower** | Governance baseline, guardrails | [📖](modules/controltower/README.md) | ✅ Complete |
+| **sso** | Identity & access management | [📖](modules/sso/README.md) | ✅ Complete |
+| **guardduty** | Threat detection | [📖](modules/guardduty/README.md) | ✅ Complete |
+| **detective** | Security investigation | [📖](modules/detective/README.md) | ✅ Complete |
+| **securityhub** | Centralized security findings | [📖](modules/securityhub/README.md) | ✅ Complete |
+| **awsconfig** | Configuration compliance | [📖](modules/awsconfig/README.md) | ✅ Complete |
+| **inspector2** | Vulnerability assessment | [📖](modules/inspector2/README.md) | 🚧 Planned |
+
+## Support and Troubleshooting
+
+### Quick Troubleshooting
+- **Account creation**: Accounts must be created via AWS Organizations CLI first
+- **GovCloud limitations**: Account names cannot be changed in GovCloud partition
+- **Control Tower conflicts**: SSO module auto-detects Control Tower management
+- **Import failures**: Check resource naming patterns for your AWS partition
+
+### Documentation Structure
+```
+docs/
+├── by_persona/           # Role-based operational guides
+│   ├── administrator.md  # Setup and deployment
+│   ├── operations.md     # Daily operations
+│   └── security-team.md  # Security architecture
+└── architecture/         # Technical architecture (may be outdated)
 ```
 
-### Account Naming Considerations
+### Example Deployment
+See `examples/` directory for complete working configuration including:
+- YAML-based account configuration
+- Module integration patterns
+- Provider setup for multi-account access
+- Real-world variable examples
 
-- **GovCloud Limitation**: Account names can only be changed from the paired commercial account
-- **Module Behavior**: In GovCloud, this module automatically ignores account name changes to prevent failures
-- **Best Practice**: Ensure account names in your configuration match the current names in the AWS Console
+---
+
+*This project implements DISA SCCA requirements with AWS Security Reference Architecture patterns, providing a complete foundation for DoD Zero Trust cloud environments.*
 
 ## Organization Membership Verification
 
@@ -514,12 +534,13 @@ No action required.
 
 ## Control Tower
 
-No action required.
+AWS Control Tower will not automatically enroll non-Landing Zone accounts, you must do this from the management account Control Tower service page in the Organization tab.
 
 If in the future you need to enroll/onboard new accounts to Control Tower, see these references:
 
 - [Enroll an existing AWS account | AWS Docs](https://docs.aws.amazon.com/controltower/latest/userguide/enroll-account.html)
 - [Field Notes: Enroll Existing AWS Accounts into AWS Control Tower | AWS Blogs](https://aws.amazon.com/blogs/architecture/field-notes-enroll-existing-aws-accounts-into-aws-control-tower/) for more information.
+- [Enabling AWS Configuration on Control Tower Main Account](https://repost.aws/questions/QUF9Umvk9aTkyL78HJJ-vYRg/enabling-aws-configuration-on-control-tower-main-account)
 
 
 ## Security Hub
