@@ -1,62 +1,162 @@
-# Operations Overview
+# Operations Guide
 
-**Daily Operations Guide** - Day-to-day management and maintenance procedures for terraform-aws-cspm.
+**Daily operations and maintenance procedures** for terraform-aws-cspm modular security architecture.
 
-## Quick Reference
 
-### Most Common Operations
+## Operations Task Schedule
 
-| Task | Command/Process | Frequency | Documentation |
-|------|----------------|-----------|---------------|
-| **Add new account** | CLI → Terraform config → Deploy | As needed | [Account Management](#account-management) |
-| **Add new OU** | Update `organizational_units` variable | As needed | [OU Management](#ou-management) |
-| **Monitor security** | Review GuardDuty findings | Daily | [Security Operations](#security-operations) |
-| **Check compliance** | Control Tower dashboard | Weekly | [Compliance Monitoring](#compliance-monitoring) |
-| **Manage SSO access** | Identity Center console | As needed | [Access Management](#access-management) |
+> [!NOTE]
+> The following schedule is a recommended baseline. Actual tasks and access requirements may vary based on your organization's authorization policies and assigned roles. Always follow your team's procedures and consult the appropriate dashboard or documentation for each check.
 
-### Emergency Procedures
-- **🚨 Security Incident**: [Incident Response](#incident-response)
-- **⚠️ Service Outage**: [Troubleshooting Guides](./by_service/)
-- **🔄 Deployment Failure**: [Rollback Procedures](#rollback-procedures)
+**Daily Operations:**
+- Review GuardDuty findings in the audit account Security Hub dashboard, check for new findings, triage alerts, and escalate critical issues
+- Check Control Tower compliance dashboard for guardrail status to identify noncompliant resources
+- Monitor ongoing deployments in your CI/CD system (Review tofu apply results, investigate failed jobs, track deployment history)
+- Verify new account compliance (Confirm account appears in correct OU, validate GuardDuty and Config enrollment, check SSO access)
+
+**Weekly Operations:**
+- Review SSO access patterns in IAM Identity Center, audit recent logins, identify unused accounts, review permission set assignments
+- Update documentation as needed (internal wiki or repo), add new account details, update onboarding steps, revise operational checklists
+- Review Config compliance scores and remediate violations in AWS Config, address failed rules, document remediation steps, assign owners for fixes
+
+**Monthly Operations:**
+- Complete security access reviews in IAM Identity Center
+- Update Terraform modules and dependencies in your repo
+- Review CloudTrail log integrity and coverage in CloudTrail console
+- Quantify compliance metrics and posture trends in Control Tower dashboard
+
+**Quarterly Operations:**
+- Perform comprehensive security audit
+- Update disaster recovery procedures and runbooks
+- Plan major architecture changes with stakeholders
+
+For detailed security operations, incident response, and compliance workflows, refer to the [Security Team Guide](./security.md).
+
+Other common operations (as needed):
+- Add new account: CLI creation → YAML config → Deploy
+- Manage SSO access: IAM Identity Center console
+- Add new OU: Update YAML config → Deploy
+
+Refer to the [Security Team Guide](./security.md) for security-specific operational details.
+
+### Module Overview
+
+| Module | Purpose | Operational Notes |
+|--------|---------|-------------------|
+| organizations  | Account placement, OU structure  | Rarely needs changes after initial setup|
+| controltower   | Governance baseline              | Monitor guardrails, handle violations   |
+| sso            | Identity & access control        | User assignments, group management      |
+| guardduty      | Threat detection                 | Daily finding reviews, tune protection plans |
+| detective      | Security investigation           | Use for incident response               |
+| securityhub    | Centralized security findings    | Weekly compliance reports               |
+| awsconfig      | Configuration compliance         | Monitor drift, handle violations        |
+| inspector2     | Vulnerability management         | Regular scans, report findings          |
+
 
 ## Account Management
 
 ### Adding New AWS Accounts
 
-#### 1. Create Account via CLI (Required First)
+#### Step 1: Create Account via AWS CLI (Required First)
 ```bash
-# GovCloud (most common)
+# GovCloud (most common for DoD environments)
 aws organizations create-gov-cloud-account \
-  --account-name "YourOrg-Department-Environment" \
-  --email "aws-dept@yourorg.com" \
+  --account-name "YourOrg-Workloads-NewApp" \
+  --email "aws-newapp@yourorg.com" \
   --profile your-management-profile
 
 # Commercial AWS
 aws organizations create-account \
-  --account-name "YourOrg-Department-Environment" \
-  --email "aws-dept@yourorg.com" \
+  --account-name "YourOrg-Workloads-NewApp" \
+  --email "aws-newapp@yourorg.com" \
   --profile your-management-profile
+
+# Record the account ID from the response
 ```
 
-#### 2. Add to Terraform Configuration
-```hcl
-# In terraform.tfvars or your configuration
-aws_account_parameters = {
-  # Existing accounts...
-  
-  "NEW_ACCOUNT_ID" = {
-    name         = "Exact-CLI-Name"           # Must match CLI exactly
-    email        = "exact-email@domain.com"  # Must match CLI exactly
-    ou           = "Workloads_Prod"          # Choose appropriate OU
-    lifecycle    = "prod"                    # prod or nonprod
-    account_type = "workload"                # AWS SRA account type
-  }
-}
+#### Step 2: Add to YAML Configuration
+Add new account to appropriate YAML file in `examples/inputs/accounts.yaml`:
+
+```yaml
+# -- inputs/accounts.yaml --
+new_application_account:
+  account_id: "NEW_ACCOUNT_ID"             # From CLI response
+  account_name: "YourOrg-Workloads-NewApp" # Exact CLI name
+  email: "aws-newapp@yourorg.com"          # Exact CLI email
+  account_type: workload                   # Determines SSO permissions
+  ou: Workloads_Prod                       # Target OU
+  lifecycle: prod                          # prod or nonprod
+  additional_tags:
+    Department: "Engineering"
+    Application: "NewApp"
+    Owner: "Development Team"
 ```
+
+#### Step 3: Deploy Changes
+```bash
+tofu plan    # Review account placement
+tofu apply   # Deploy account to organization
+```
+
+#### Step 4: Verify Deployment
+```bash
+# Check account placement
+aws organizations list-accounts-for-parent --parent-id ou-xxxxx
+
+# Verify security services enrollment (may take 5-10 minutes)
+# Login to audit account and check:
+# - GuardDuty: Account appears in member accounts
+# - Detective: Account enrolled in behavior graph
+# - Security Hub: Account shows in organization view
+```
+
+### Account Lifecycle Management
+
+#### Moving Accounts Between OUs
+```yaml
+# Update the account's OU in YAML configuration
+existing_account:
+  # ... other config unchanged
+  ou: Workloads_NonProd  # Changed from Workloads_Prod
+```
+
+Then deploy: `tofu apply`
+
+#### Updating Account Classifications
+```yaml
+# Change account type (affects SSO permissions)
+existing_account:
+  # ... other config unchanged
+  account_type: sandbox  # Changed from workload
+  lifecycle: nonprod     # Update lifecycle to match
+```
+
+#### Removing/Suspending Accounts
+
+> [!IMPORTANT]
+> **Account Closure**: This process only removes accounts from organizational management. To actually close an AWS account, you must follow the [AWS account closure process](https://docs.aws.amazon.com/govcloud-us/latest/UserGuide/Closing-govcloud-account.html) separately.
+
+```yaml
+# Move to suspended OU for deactivation
+suspended_account:
+  # ... other config unchanged
+  ou: Suspended
+  lifecycle: nonprod
+  additional_tags:
+    Status: "Suspended"
+    Reason: "Project completed"
+    Closure_Date: "2025-01-15"
+```
+
+**Account Removal Workflow:**
+1. **Suspend in Organization**: Update YAML config → Deploy
+2. **Data Backup**: Ensure all critical data is backed up
+3. **Resource Cleanup**: Remove/migrate resources from account
+4. **AWS Account Closure**: Follow AWS documentation for formal closure
+5. **Remove from Config**: Delete from YAML after AWS closure complete
 
 #### 3. Deploy Changes
 ```bash
-cd examples/
 tofu plan   # Review account placement
 tofu apply  # Deploy account to correct OU
 ```
@@ -79,26 +179,33 @@ tofu apply  # Deploy account to correct OU
 
 ### Adding New Organizational Units
 
-#### 1. Update Configuration
-```hcl
-# Simply extend the organizational_units variable
-organizational_units = {
-  # Standard OUs
-  Infrastructure_Prod    = { lifecycle = "prod" }
-  Infrastructure_NonProd = { lifecycle = "nonprod" }
-  Workloads_Prod        = { lifecycle = "prod" }
-  Workloads_NonProd     = { lifecycle = "nonprod" }
-  
-  # New custom OUs - no code changes needed!
-  Development           = { lifecycle = "nonprod" }
-  Research_Prod         = { lifecycle = "prod" }
-  Sandbox_Test          = { lifecycle = "nonprod" }
-}
+#### 1. Update YAML Configuration
+Add new OUs to the project's YAML configuration:
+
+```yaml
+# -- inputs/organizational_units.yaml --
+# Standard OUs (automatically included)
+# Infrastructure_Prod: { lifecycle: "prod" }
+# Infrastructure_NonProd: { lifecycle: "nonprod" }
+# Workloads_Prod: { lifecycle: "prod" }
+# Workloads_NonProd: { lifecycle: "nonprod" }
+
+# New custom OUs - no code changes needed!
+Development:
+  lifecycle: nonprod
+  description: "Development and testing environments"
+
+Research_Prod:
+  lifecycle: prod
+  description: "Research and development production workloads"
+
+Sandbox_Test:
+  lifecycle: nonprod
+  description: "Experimental and proof-of-concept workloads"
 ```
 
 #### 2. Deploy OU Structure
 ```bash
-cd examples/
 tofu plan   # Review new OU creation
 tofu apply  # Create new OUs
 ```
@@ -112,87 +219,6 @@ Update account configurations to use new OU names, then redeploy.
 - **Governance**: Consider Control Tower guardrail requirements
 - **Naming Convention**: Use clear, descriptive OU names
 
-## Security Operations
-
-### Daily Security Monitoring
-
-#### GuardDuty Findings Review
-1. **Access Audit Account**: Log into audit account (261523644253)
-2. **Open GuardDuty Console**: Review findings dashboard
-3. **Triage Findings**: Categorize by severity and impact
-4. **Investigate High/Critical**: Deep dive into serious threats
-5. **Document Response**: Record actions taken
-
-#### Security Health Checks
-```bash
-# Check GuardDuty status across accounts
-aws guardduty list-detectors --region us-east-1
-
-# Review Control Tower compliance
-aws controltower list-enabled-controls --target-identifier "OU_ID"
-
-# Monitor SSO access patterns
-aws sso-admin list-permission-sets --instance-arn "SSO_INSTANCE_ARN"
-```
-
-### Weekly Security Reviews
-
-| Day | Task | Focus | Output |
-|-----|------|-------|--------|
-| **Monday** | GuardDuty findings summary | Threat landscape | Weekly report |
-| **Wednesday** | Control Tower compliance | Guardrail status | Compliance dashboard |
-| **Friday** | SSO access review | Permission changes | Access audit log |
-
-### Incident Response
-
-#### Security Incident Workflow
-```
-Detection → Classification → Investigation → Containment → Eradication → Recovery
-     │            │               │              │              │           │
-     ▼            ▼               ▼              ▼              ▼           ▼
-GuardDuty → High/Med/Low → Detective → Isolate → Remediate → Monitor
-```
-
-#### Incident Classification
-- **High**: Active compromise, data exfiltration, persistent threats
-- **Medium**: Suspicious activity, policy violations, configuration drift  
-- **Low**: Reconnaissance, false positives, informational findings
-
-#### Response Procedures
-1. **Immediate**: Document finding, assess scope, notify stakeholders
-2. **Investigation**: Use Detective, CloudTrail, Config for evidence
-3. **Containment**: Isolate affected resources, revoke compromised access
-4. **Remediation**: Apply fixes, update policies, strengthen controls
-5. **Recovery**: Restore services, monitor for recurrence
-6. **Lessons Learned**: Update procedures, improve detection
-
-## Compliance Monitoring
-
-### Control Tower Compliance
-
-#### Daily Checks
-- **Guardrail Status**: All mandatory guardrails active
-- **Account Drift**: No configuration drift from baseline
-- **New Account Compliance**: Recently added accounts compliant
-
-#### Weekly Reviews
-- **Compliance Dashboard**: Review overall organizational compliance
-- **Guardrail Violations**: Investigate and remediate any violations
-- **Account Factory**: Review provisioned accounts and templates
-
-#### Monthly Reports
-- **Compliance Metrics**: Quantify compliance posture trends
-- **Guardrail Effectiveness**: Assess guardrail impact and coverage
-- **Risk Assessment**: Identify compliance gaps and risks
-
-### Service-Specific Compliance
-
-| Service | Check Frequency | Key Metrics | Action Items |
-|---------|----------------|-------------|--------------|
-| **GuardDuty** | Daily | Finding counts, false positive rate | Tune detection rules |
-| **Config** | Weekly | Compliance score, rule violations | Remediate non-compliance |
-| **CloudTrail** | Monthly | Log integrity, coverage gaps | Ensure complete logging |
-| **SSO** | Monthly | Access patterns, unused permissions | Review and cleanup |
 
 ## Access Management
 
@@ -206,23 +232,23 @@ GuardDuty → High/Med/Low → Detective → Isolate → Remediate → Monitor
 
 #### Managing Permission Sets
 ```hcl
-# Example permission set configuration
-permission_sets = {
-  SecurityTeamRole = {
-    description      = "Security team access"
-    managed_policies = ["ViewOnlyAccess", "SecurityAudit"]
-    accounts = {
-      audit       = ["SecurityTeam"]
-      log_archive = ["SecurityTeam"]
+# Example: Permission sets are defined per group/persona
+locals {
+  aws_sso_groups = {
+    aws_admin = {
+      display_name       = "${var.project}-AwsAdmin"
+      description        = "Administrator access provides full access to AWS services and resources."
+      managed_policy_arn = "arn:aws-us-gov:iam::aws:policy/AdministratorAccess"
     }
+    aws_sec_auditor = {
+      display_name       = "${var.project}-AwsSecAuditor"
+      description        = "Read-only access for security audit."
+      managed_policy_arn = "arn:aws-us-gov:iam::aws:policy/SecurityAudit"
+    }
+    # ...other groups...
   }
 }
 ```
-
-#### Access Reviews
-- **Monthly**: Review user access and activity
-- **Quarterly**: Audit permission sets and policies
-- **Annually**: Complete access certification
 
 ### Cross-Account Access Patterns
 - **Security Services**: Use audit account as hub
@@ -230,63 +256,19 @@ permission_sets = {
 - **Development**: Workload accounts for application teams
 - **Audit**: Log archive account for compliance teams
 
-## Backup and Recovery
-
-### Configuration Backup
-```bash
-# Backup Terraform state
-aws s3 cp terraform.tfstate s3://backup-bucket/tfstate/$(date +%Y%m%d)/
-
-# Export Organizations structure
-aws organizations list-organizational-units-for-parent --parent-id ROOT_ID > ou-backup.json
-
-# Export SSO configuration  
-aws sso-admin list-permission-sets --instance-arn INSTANCE_ARN > sso-backup.json
-```
-
-### Disaster Recovery Procedures
-
-#### Service Recovery Priority
-1. **Critical**: Organizations, Control Tower, SSO
-2. **High**: GuardDuty, Config, CloudTrail
-3. **Medium**: Security Hub, Detective, Inspector
-4. **Low**: Custom configurations, non-essential services
-
-#### Recovery Steps
-1. **Assess Impact**: Determine scope of outage/failure
-2. **Restore Core**: Organizations and Control Tower first
-3. **Restore Security**: Security services and monitoring
-4. **Validate**: Confirm all services operational
-5. **Monitor**: Watch for issues post-recovery
-
 ## Rollback Procedures
 
-### Safe Rollback Strategy
-```bash
-# 1. Review current state
-tofu plan
+### GitOps-Based Rollback Strategy
+Rollback and recovery should be performed using GitOps principles:
 
-# 2. Identify specific resources to rollback
-tofu plan -target=module.specific_service
+1. **Identify the desired rollback point**: Locate the previous known-good commit in your version control system (e.g., Git).
+2. **Revert or checkout the commit**: Use `git revert` or `git checkout <commit>` to restore the configuration and code to the desired state.
+3. **Push changes to your main branch**: Commit and push the rollback to your repository. This triggers your CI/CD pipeline to redeploy the reverted configuration automatically.
+4. **Monitor pipeline execution**: Ensure the pipeline completes successfully and the infrastructure matches the intended state.
+5. **Verify rollback success**: Use tofu plan and monitoring tools to confirm that the rollback has restored the expected configuration and resources.
 
-# 3. Use previous known-good configuration
-git checkout KNOWN_GOOD_COMMIT
-
-# 4. Apply rollback
-tofu apply -target=module.specific_service
-
-# 5. Verify rollback success
-tofu plan  # Should show no changes
-```
-
-### Rollback Decision Matrix
-
-| Scenario | Action | Risk Level | Approval Required |
-|----------|--------|------------|-------------------|
-| **Config change error** | Immediate rollback | Low | Self-service |
-| **Service disruption** | Coordinated rollback | Medium | Team lead |
-| **Security impact** | Emergency rollback | High | Security team |
-| **Multi-service failure** | Staged rollback | Critical | Management |
+> [!IMPORTANT]
+> Manual rollbacks using local tofu commands are discouraged in production. Always use version control and CI/CD automation to ensure traceability, auditability, and consistency.
 
 ## Monitoring and Alerting
 
@@ -329,45 +311,3 @@ aws cloudwatch put-metric-alarm \
 | **Provider authentication** | Access denied errors | Verify AWS credentials | Monitor credential expiry |
 | **Control Tower drift** | Guardrail failures | Re-run Landing Zone setup | Regular compliance checks |
 | **SSO permission issues** | Access denied | Review permission sets | Regular access audits |
-
-### Diagnostic Commands
-```bash
-# Check Terraform state health
-tofu show | grep -E "(error|fail)"
-
-# Verify AWS service status
-aws sts get-caller-identity  # Check credentials
-aws organizations describe-organization  # Check org access
-aws guardduty list-detectors  # Check GuardDuty
-
-# Monitor deployment logs
-tail -f terraform.log | grep -E "(ERROR|WARN)"
-```
-
-## Maintenance Schedules
-
-### Daily Tasks (5-10 minutes)
-- Review GuardDuty findings
-- Check Control Tower compliance dashboard
-- Monitor any ongoing deployments
-
-### Weekly Tasks (30-45 minutes)
-- Review SSO access patterns
-- Update documentation as needed
-- Plan upcoming account/OU changes
-
-### Monthly Tasks (2-3 hours)
-- Complete security access reviews
-- Update Terraform modules
-- Review and optimize configurations
-
-### Quarterly Tasks (Half day)
-- Comprehensive security audit
-- Update disaster recovery procedures
-- Plan major architecture changes
-
----
-
-**📋 Service-Specific Operations**: [Service Documentation](./by_service/)
-
-*Last updated: July 31, 2025*
