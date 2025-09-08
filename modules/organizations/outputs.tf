@@ -19,25 +19,6 @@ output "account_id_map" {
   }
 }
 
-output "accounts_by_type" {
-  description = "Accounts organized by their SRA account type for easy module integration."
-  value = {
-    for account_type in local.valid_account_types : account_type => {
-      for account_id, account in(
-        length(var.all_accounts_all_parameters) > 0 ?
-        var.all_accounts_all_parameters :
-        var.organizations_account_parameters
-      ) :
-      account_id => {
-        name  = account.name
-        email = account.email
-        ou    = account.ou
-      }
-      if account.account_type == account_type
-    }
-  }
-}
-
 output "account_organizational_units" {
   description = "Map of account IDs to their OU names."
   value = {

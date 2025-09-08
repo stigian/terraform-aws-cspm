@@ -13,20 +13,6 @@ check "accounts_exist_in_organization" {
   }
 }
 
-# Load AWS Security Reference Architecture (SRA) Account Types from YAML
-# These match accreditation requirements and cannot be changed
-locals {
-  sra_account_types = yamldecode(file("${path.module}/../../config/sra-account-types.yaml"))
-
-  # Map of valid account types for validation
-  valid_account_types = keys(local.sra_account_types)
-
-  # Add Project tag to global tags
-  global_tags = merge(var.global_tags, {
-    Project = var.project
-  })
-}
-
 resource "aws_organizations_organization" "this" {
   aws_service_access_principals = [
     "cloudtrail.amazonaws.com",
