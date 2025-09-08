@@ -1,5 +1,5 @@
 {
-  "governedRegions": ${jsonencode(var.governed_regions)},
+  "governedRegions": ${jsonencode(governed_regions)},
   "organizationStructure": {
     "security": {
       "name": "Security"
