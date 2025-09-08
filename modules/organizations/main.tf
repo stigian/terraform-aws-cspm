@@ -48,12 +48,14 @@ resource "aws_organizations_organizational_unit" "this" {
   )
 }
 
+# If Control Tower is enabled, and the account is in the Sandbox or Security OU, place it in the root
+# If Control Tower is not enabled, place it in the specified OU or root if OU is "Root"
 resource "aws_organizations_account" "commercial" {
-  for_each = data.aws_partition.current.partition != "aws-us-gov" ? var.organizations_account_parameters : {}
+  for_each = data.aws_partition.current.partition != "aws-us-gov" ? var.all_accounts_all_parameters : {}
 
   name      = each.value.name
   email     = each.value.email
-  parent_id = each.value.ou != "Root" ? aws_organizations_organizational_unit.this[each.value.ou].id : data.aws_organizations_organization.this.roots[0].id
+  parent_id = (var.control_tower_enabled && (each.value.ou == "Sandbox" || each.value.ou == "Security")) ? data.aws_organizations_organization.this.roots[0].id : (each.value.ou != "Root" ? aws_organizations_organizational_unit.this[each.value.ou].id : data.aws_organizations_organization.this.roots[0].id)
 
   tags = merge(
     var.global_tags,
@@ -68,12 +70,14 @@ resource "aws_organizations_account" "commercial" {
   }
 }
 
+# If Control Tower is enabled, and the account is in the Sandbox or Security OU, place it in the root
+# If Control Tower is not enabled, place it in the specified OU or root if OU is "Root"
 resource "aws_organizations_account" "govcloud" {
-  for_each = data.aws_partition.current.partition == "aws-us-gov" ? var.organizations_account_parameters : {}
+  for_each = data.aws_partition.current.partition == "aws-us-gov" ? var.all_accounts_all_parameters : {}
 
   name      = each.value.name
   email     = each.value.email
-  parent_id = each.value.ou != "Root" ? aws_organizations_organizational_unit.this[each.value.ou].id : data.aws_organizations_organization.this.roots[0].id
+  parent_id = (var.control_tower_enabled && (each.value.ou == "Sandbox" || each.value.ou == "Security")) ? data.aws_organizations_organization.this.roots[0].id : (each.value.ou != "Root" ? aws_organizations_organizational_unit.this[each.value.ou].id : data.aws_organizations_organization.this.roots[0].id)
 
   tags = merge(
     var.global_tags,
