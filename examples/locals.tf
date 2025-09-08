@@ -19,7 +19,7 @@ locals {
   # ]...)
 
   # Load SRA account types for validation and mapping
-  sra_account_types = yamldecode(file("${path.root}/../config/sra-account-types.yaml"))
+  sra_account_types = yamldecode(file("${var.inputs_directory}/sra-account-types.yaml"))
 
   # Transform accounts: Simple YAML → Organizations module format
   # MAINTAINS RESOURCE KEYS: Uses account_id as key (same as current)

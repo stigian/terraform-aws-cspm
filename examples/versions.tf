@@ -15,11 +15,11 @@ terraform {
 
 # ── shared local values (once, at the top) ──
 locals {
-  partition       = data.aws_partition.current.partition
-  region          = var.aws_region
-  non_lz_accounts = local.non_lz_accounts_map
+  partition         = data.aws_partition.current.partition
+  region            = var.aws_region
+  non_lz_accounts   = local.non_lz_accounts_map
   non_mgmt_accounts = local.non_mgmt_accounts_map
-  all_accounts    = local.aws_account_parameters
+  all_accounts      = local.aws_account_parameters
 }
 
 # ── provider configurations ──
