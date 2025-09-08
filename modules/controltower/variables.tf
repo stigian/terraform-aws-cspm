@@ -90,3 +90,9 @@ variable "additional_kms_key_admin_arns" {
     error_message = "All ARNs must be valid IAM ARNs in the format: arn:aws-us-gov:iam::account-id:user/username or arn:aws-us-gov:iam::account-id:role/rolename (or arn:aws: for commercial)"
   }
 }
+
+variable "governed_regions" {
+  type       = list(string)
+  description = "List of AWS regions to be governed by Control Tower."
+  default    = ["us-gov-west-1", "us-gov-east-1"]
+}

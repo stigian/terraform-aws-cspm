@@ -216,6 +216,7 @@ locals {
     security_account_id       = var.audit_account_id
     kms_key_arn               = aws_kms_key.control_tower.arn
     access_management_enabled = !var.self_managed_sso # Invert: self_managed means CT SSO disabled
+    governed_regions          = var.governed_regions
   }) : null
 
   # Add Project tag to global tags

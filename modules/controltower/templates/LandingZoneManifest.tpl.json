@@ -1,8 +1,5 @@
 {
-  "governedRegions": [
-    "us-gov-west-1",
-    "us-gov-east-1"
-  ],
+  "governedRegions": ${governed_regions},
   "organizationStructure": {
     "security": {
       "name": "Security"
@@ -28,7 +25,6 @@
     "accountId": "${security_account_id}"
   },
   "accessManagement": {
-    "enabled": ${access_management_enabled
-    }
+    "enabled": ${access_management_enabled}
   }
 }
