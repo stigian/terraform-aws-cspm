@@ -82,20 +82,6 @@ locals {
     account_id if account_data.account_type == "audit"
   ][0], null)
 
-  # Generate accounts_by_type structure (useful for security services)
-  accounts_by_type = {
-    for account_type in keys(local.sra_account_types) :
-    account_type => {
-      for account_id, account_data in local.aws_account_parameters :
-      account_id => {
-        name  = account_data.name
-        email = account_data.email
-        ou    = account_data.ou
-      }
-      if account_data.account_type == account_type
-    }
-  }
-
   # OU resolution for Control Tower integration
   # When Control Tower is enabled, some OUs are managed by Control Tower
   control_tower_managed_ous = var.control_tower_enabled ? ["Security", "Sandbox"] : []
