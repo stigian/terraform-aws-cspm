@@ -41,7 +41,7 @@ resource "aws_organizations_organizational_unit" "this" {
   parent_id = data.aws_organizations_organization.this.roots[0].id
 
   tags = merge(
-    local.global_tags,
+    var.global_tags,
     {
       Lifecycle = each.value.lifecycle
     },
@@ -56,7 +56,7 @@ resource "aws_organizations_account" "commercial" {
   parent_id = each.value.ou != "Root" ? aws_organizations_organizational_unit.this[each.value.ou].id : data.aws_organizations_organization.this.roots[0].id
 
   tags = merge(
-    local.global_tags,
+    var.global_tags,
     {
       Lifecycle = each.value.lifecycle
     },
@@ -76,7 +76,7 @@ resource "aws_organizations_account" "govcloud" {
   parent_id = each.value.ou != "Root" ? aws_organizations_organizational_unit.this[each.value.ou].id : data.aws_organizations_organization.this.roots[0].id
 
   tags = merge(
-    local.global_tags,
+    var.global_tags,
     {
       Lifecycle = each.value.lifecycle
     },
