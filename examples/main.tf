@@ -42,7 +42,7 @@ module "organizations" {
   control_tower_enabled            = var.control_tower_enabled
 }
 
-module "controltower" {
+module "controltower_admin" { # change to controltower_admin
   source = "../modules/controltower"
 
   depends_on = [module.organizations]
@@ -64,10 +64,12 @@ module "controltower" {
 }
 
 # Adds AWSControlTowerExecution role to non-LZ accounts
-module "control_tower_members" {
+# AWS Control Tower will not automatically enroll non-Landing Zone accounts, you must do this from
+# the management account Control Tower service page in the Organization tab.
+module "controltower_members" {
   source = "../modules/controltower/member"
 
-  depends_on = [module.controltower]
+  depends_on = [module.controltower_admin]
   for_each   = local.non_lz_accounts
 
   providers = {
@@ -130,7 +132,7 @@ module "guardduty" {
   enable_malware_protection_s3  = var.enable_malware_protection_s3
   malware_protection_s3_buckets = var.malware_protection_s3_buckets
 
-  depends_on = [module.controltower] # Wait for CT baseline
+  depends_on = [module.controltower_admin] # Wait for CT baseline
 }
 
 module "detective" {
@@ -144,6 +146,19 @@ module "detective" {
   }
 
   depends_on = [module.guardduty]
+}
+
+module "inspector2" {
+  source = "../modules/inspector2"
+
+  audit_account_id       = local.audit_account_id
+  member_account_ids_map = local.non_audit_account_ids_map
+  global_tags            = var.global_tags
+
+  providers = {
+    aws.audit      = aws.audit
+    aws.management = aws.management
+  }
 }
 
 ###############################################################################
@@ -160,11 +175,12 @@ module "awsconfig_admin" {
     aws.audit      = aws.audit
   }
 
-  audit_account_id = local.audit_account_id
-  organization_id  = var.aws_organization_id
-  global_tags      = var.global_tags
+  audit_account_id    = local.audit_account_id
+  organization_id     = var.aws_organization_id
+  global_tags         = var.global_tags
+  ct_logs_bucket_name = "" # TODO: finish mgmt account recording, see comments in module
 
-  depends_on = [module.controltower]
+  depends_on = [module.controltower_admin]
 }
 
 module "awsconfig_members" {
@@ -175,23 +191,35 @@ module "awsconfig_members" {
     aws.member = aws.ct_exec[each.key]
   }
 
-  depends_on = [module.control_tower_members]
+  depends_on = [module.controltower_members]
 }
+
+# module "awsconfig_management_account" {
+#   source   = "../modules/awsconfig/member"
+
+#   providers = {
+#     aws.member = aws.management
+#   }
+
+#   depends_on = [module.control_tower_members]
+# }
 
 
 ###############################################################################
 # Security Hub
 ###############################################################################
 
-# module "security_hub_admin" {
-#   source = "../modules/security_hub/admin"
+module "securityhub" {
+  source = "../modules/securityhub"
 
-#   audit_account_id = local.audit_account_id
-#   global_tags      = var.global_tags
+  audit_account_id      = local.audit_account_id
+  management_account_id = local.management_account_id
+  global_tags           = var.global_tags
 
-#   providers = {
-#     aws.audit = aws.audit
-#   }
+  providers = {
+    # aws.management = aws.management
+    aws.audit = aws.audit
+  }
 
-#   depends_on = [module.guardduty]
-# }
+  depends_on = [module.guardduty]
+}

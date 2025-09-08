@@ -1,0 +1,64 @@
+###############################################################################
+# SRA Organizational Units - DO NOT MODIFY
+###############################################################################
+
+Security:
+  lifecycle: prod
+  description: "Security and compliance accounts (log archive, audit, security tooling)"
+  additional_tags:
+    Purpose: "Security"
+    Compliance: "Required"
+
+Policy_Staging:
+  lifecycle: nonprod
+  description: "Policy testing and validation"
+  additional_tags:
+    Purpose: "Policy Testing"
+    Environment: "NonProd"
+
+Suspended:
+  lifecycle: nonprod
+  description: "Suspended or decommissioned accounts"
+  additional_tags:
+    Purpose: "Account Lifecycle Management"
+    Status: "Suspended"
+
+Infrastructure_Prod:
+  lifecycle: prod
+  description: "Production infrastructure accounts (network, shared services)"
+  additional_tags:
+    Purpose: "Infrastructure"
+    Environment: "Production"
+
+Infrastructure_NonProd:
+  lifecycle: nonprod
+  description: "Non-production infrastructure accounts"
+  additional_tags:
+    Purpose: "Infrastructure"
+    Environment: "NonProduction"
+
+Workloads_Prod:
+  lifecycle: prod
+  description: "Production workload and application accounts"
+  additional_tags:
+    Purpose: "Workloads"
+    Environment: "Production"
+
+Workloads_NonProd:
+  lifecycle: nonprod
+  description: "Development, testing, and staging workload accounts"
+  additional_tags:
+    Purpose: "Workloads"
+    Environment: "NonProduction"
+
+Sandbox:
+  lifecycle: nonprod
+  description: "Experimental and proof-of-concept accounts"
+  additional_tags:
+    Purpose: "Experimentation"
+    Environment: "Sandbox"
+
+
+###############################################################################
+# Define additional OUs below, as required
+###############################################################################

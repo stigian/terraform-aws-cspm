@@ -1,4 +1,4 @@
-variable "config_directory" {
+variable "inputs_directory" {
   description = "Path to the directory containing YAML configuration files."
   type        = string
   default     = "./config"

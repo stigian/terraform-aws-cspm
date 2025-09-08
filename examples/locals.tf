@@ -4,17 +4,19 @@ locals {
     Project = var.project
   })
 
-  # Load and flatten all account configurations from YAML files
-  raw_account_configs = merge([
-    for file in fileset("${var.config_directory}/accounts", "*.yaml") :
-    yamldecode(file("${var.config_directory}/accounts/${file}"))
-  ]...)
+  # /Users/lance/Documents/dev/work/terraform-aws-cspm/examples/config/accounts.yaml
+  raw_account_configs = yamldecode(file("${var.inputs_directory}/accounts.yaml"))
+  # merge([
+  #   for file in fileset("${var.inputs_directory}/accounts", "*.yaml") :
+  #   yamldecode(file("${var.inputs_directory}/accounts/${file}"))
+  # ]...)
 
-  # Load and flatten all OU configurations from YAML files
-  raw_ou_configs = merge([
-    for file in fileset("${path.root}/${var.config_directory}/organizational-units", "*.yaml") :
-    yamldecode(file("${path.root}/${var.config_directory}/organizational-units/${file}"))
-  ]...)
+  # /Users/lance/Documents/dev/work/terraform-aws-cspm/examples/config/organizational_units.yaml
+  raw_ou_configs = yamldecode(file("${var.inputs_directory}/organizational_units.yaml"))
+  # merge([
+  #   for file in fileset("${path.root}/${var.inputs_directory}/organizational-units", "*.yaml") :
+  #   yamldecode(file("${path.root}/${var.inputs_directory}/organizational-units/${file}"))
+  # ]...)
 
   # Load SRA account types for validation and mapping
   sra_account_types = yamldecode(file("${path.root}/../config/sra-account-types.yaml"))
@@ -160,6 +162,15 @@ locals {
   ) : []
 }
 
+/* SSO assignments normalization: single source of truth in accounts.yaml */
+locals {
+  # Build map keyed by account_id with sso_groups list (defaults to empty list)
+  sso_assignments_by_account_id = {
+    for account_id, account_data in local.aws_account_parameters :
+    account_id => lookup(try(local.raw_account_configs[account_data.name], {}), "sso_groups", [])
+  }
+}
+
 # Configuration validation check
 check "yaml_configuration_validation" {
   assert {
@@ -170,18 +181,34 @@ check "yaml_configuration_validation" {
 
 # Slice all accounts map into different scopes
 locals {
+
+  # Account collection consisting of member accounts, excluding management, log_archive, and audit
   non_lz_accounts_map = {
     for account_id, params in var.aws_account_parameters :
     account_id => params
     if !(params.account_type == "management" || params.account_type == "log_archive" || params.account_type == "audit")
   }
   non_lz_account_ids = keys(local.non_lz_accounts_map)
+
+  # Account collection consisting of all but the management account
   non_mgmt_accounts_map = {
     for account_id, params in var.aws_account_parameters :
     account_id => params
     if !(params.account_type == "management")
   }
   non_mgmt_account_ids = keys(local.non_mgmt_accounts_map)
+
+  # Account collection consisting of all but the audit account
+  non_audit_accounts_map = {
+    for account_id, params in var.aws_account_parameters :
+    account_id => params
+    if !(params.account_type == "audit")
+  }
+  non_audit_account_ids_map = {
+    for account_id, account_data in local.non_audit_accounts_map :
+    account_data.name => account_id
+  }
+  non_audit_account_ids = keys(local.non_audit_accounts_map)
 }
 
 
