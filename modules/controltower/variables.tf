@@ -92,7 +92,7 @@ variable "additional_kms_key_admin_arns" {
 }
 
 variable "governed_regions" {
-  type       = list(string)
+  type        = list(string)
   description = "List of AWS regions to be governed by Control Tower."
-  default    = ["us-gov-west-1", "us-gov-east-1"]
+  default     = ["us-gov-west-1", "us-gov-east-1"]
 }
