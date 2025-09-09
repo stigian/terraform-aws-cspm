@@ -22,5 +22,5 @@ variable "aggregator_linking_mode" {
 variable "aggregator_specified_regions" {
   description = "List of regions to include in the Config aggregator when using SPECIFIED_REGIONS linking mode."
   type        = list(string)
-  default     = ["us-gov-west-1", "us-gov-east-1"]
+  default     = []
 }
