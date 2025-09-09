@@ -8,20 +8,6 @@ resource "aws_ssoadmin_managed_policy_attachment" "detective_fullaccess" {
 data "aws_partition" "current" {}
 data "aws_caller_identity" "current" {}
 
-# Validate existing admin user exists in Identity Store (if provided)
-data "aws_identitystore_user" "existing_admin_user" {
-  count             = var.existing_admin_user_id != null ? 1 : 0
-  identity_store_id = data.aws_ssoadmin_instances.this[0].identity_store_ids[0]
-  user_id           = var.existing_admin_user_id
-}
-
-# check "existing_admin_user_exists" {
-#   assert {
-#     condition     = var.existing_admin_user_id == null || length(data.aws_identitystore_user.existing_admin_user) > 0
-#     error_message = "Existing admin user ID '${var.existing_admin_user_id}' does not exist in Identity Store. Verify the user ID is correct and the user hasn't been deleted."
-#   }
-# }
-
 ###############################################################################
 # Control Tower Detection
 ###############################################################################
@@ -89,13 +75,13 @@ resource "aws_identitystore_user" "initial_admins" {
   }
 }
 
-# Add admin users to appropriate groups (both existing and newly created users)
+# Add admin users to appropriate groups
 resource "aws_identitystore_group_membership" "initial_admin_memberships" {
   for_each = local.sso_management_enabled ? local.initial_admin_group_memberships : {}
 
   identity_store_id = tolist(data.aws_ssoadmin_instances.this[0].identity_store_ids)[0]
   group_id          = aws_identitystore_group.this[each.value.group_name].group_id
-  member_id         = try(each.value.is_existing_user, false) ? each.value.user_id : aws_identitystore_user.initial_admins[each.value.user_name].user_id
+  member_id         = aws_identitystore_user.initial_admins[each.value.user_name].user_id
 }
 
 resource "aws_ssoadmin_account_assignment" "this" {

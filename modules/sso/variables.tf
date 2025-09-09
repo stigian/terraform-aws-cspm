@@ -130,23 +130,6 @@ variable "auto_detect_control_tower" {
 }
 
 # TODO: remove this, assume the caller will not have deployed IAM Identity Center yet and so no user will exist
-variable "existing_admin_user_id" {
-  description = <<-EOT
-    User ID of an existing SSO user to grant admin access (optional).
-
-    If you already have an SSO user (e.g., your personal user), provide the User ID here
-    and that user will be automatically added to admin groups for all accounts.
-
-    To find your User ID:
-    1. Go to AWS Console → IAM Identity Center → Users
-    2. Click on your username
-    3. Copy the "User ID" field (format: 1234567890-abcd-efgh-ijkl-123456789012)
-
-    This is completely optional since regular IAM logins can be used as fallback.
-  EOT
-  type        = string
-  default     = null
-}
 
 variable "initial_admin_users" {
   description = <<-EOT
