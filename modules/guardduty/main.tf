@@ -50,7 +50,7 @@ resource "aws_guardduty_organization_configuration" "this" {
 
 ###############################################################################
 # GuardDuty Protection Plans Configuration
-# 
+#
 # These features provide enhanced threat detection capabilities beyond the
 # foundational GuardDuty monitoring of CloudTrail, VPC Flow Logs, and DNS logs.
 #
@@ -58,67 +58,67 @@ resource "aws_guardduty_organization_configuration" "this" {
 ###############################################################################
 
 # Priority 1: S3 Protection - Monitor S3 data events for suspicious access
-resource "aws_guardduty_detector_feature" "s3_protection" {
+resource "aws_guardduty_organization_configuration_feature" "s3_protection" {
   count       = var.enable_s3_protection ? 1 : 0
   provider    = aws.audit
   detector_id = aws_guardduty_detector.audit.id
   name        = "S3_DATA_EVENTS"
-  status      = "ENABLED"
+  auto_enable = "ALL"
 
   depends_on = [aws_guardduty_organization_configuration.this]
 }
 
 # Priority 1: Runtime Monitoring - eBPF-based OS-level monitoring for EC2/EKS/ECS
-resource "aws_guardduty_detector_feature" "runtime_monitoring" {
+resource "aws_guardduty_organization_configuration_feature" "runtime_monitoring" {
   count       = var.enable_runtime_monitoring ? 1 : 0
   provider    = aws.audit
   detector_id = aws_guardduty_detector.audit.id
   name        = "RUNTIME_MONITORING"
-  status      = "ENABLED"
+  auto_enable      = "ALL"
 
   depends_on = [aws_guardduty_organization_configuration.this]
 }
 
 # Priority 1: Malware Protection for EC2 - Scan EBS volumes when threats detected
-resource "aws_guardduty_detector_feature" "malware_protection_ec2" {
+resource "aws_guardduty_organization_configuration_feature" "malware_protection_ec2" {
   count       = var.enable_malware_protection_ec2 ? 1 : 0
   provider    = aws.audit
   detector_id = aws_guardduty_detector.audit.id
   name        = "EBS_MALWARE_PROTECTION"
-  status      = "ENABLED"
+  auto_enable = "ALL"
 
   depends_on = [aws_guardduty_organization_configuration.this]
 }
 
 # Priority 2: Lambda Protection - Monitor Lambda VPC network activity
-resource "aws_guardduty_detector_feature" "lambda_protection" {
+resource "aws_guardduty_organization_configuration_feature" "lambda_protection" {
   count       = var.enable_lambda_protection ? 1 : 0
   provider    = aws.audit
   detector_id = aws_guardduty_detector.audit.id
   name        = "LAMBDA_NETWORK_LOGS"
-  status      = "ENABLED"
+  auto_enable = "ALL"
 
   depends_on = [aws_guardduty_organization_configuration.this]
 }
 
 # Priority 2: EKS Protection - Monitor Kubernetes audit logs
-resource "aws_guardduty_detector_feature" "eks_protection" {
+resource "aws_guardduty_organization_configuration_feature" "eks_protection" {
   count       = var.enable_eks_protection ? 1 : 0
   provider    = aws.audit
   detector_id = aws_guardduty_detector.audit.id
   name        = "EKS_AUDIT_LOGS"
-  status      = "ENABLED"
+  auto_enable = "ALL"
 
   depends_on = [aws_guardduty_organization_configuration.this]
 }
 
 # Priority 2: RDS Protection - Monitor Aurora database login activity
-resource "aws_guardduty_detector_feature" "rds_protection" {
+resource "aws_guardduty_organization_configuration_feature" "rds_protection" {
   count       = var.enable_rds_protection ? 1 : 0
   provider    = aws.audit
   detector_id = aws_guardduty_detector.audit.id
   name        = "RDS_LOGIN_EVENTS"
-  status      = "ENABLED"
+  auto_enable = "ALL"
 
   depends_on = [aws_guardduty_organization_configuration.this]
 }

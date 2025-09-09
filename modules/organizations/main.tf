@@ -48,7 +48,8 @@ resource "aws_organizations_organizational_unit" "this" {
   )
 }
 
-# If Control Tower is enabled, and the account is in the Sandbox or Security OU, place it in the root
+# If Control Tower is enabled, and the account is in the Sandbox or Security OU, place it in the root,
+#   Control Tower will move it to the appropriate OU later, so we ignore changes to parent_id
 # If Control Tower is not enabled, place it in the specified OU or root if OU is "Root"
 resource "aws_organizations_account" "commercial" {
   for_each = data.aws_partition.current.partition != "aws-us-gov" ? var.all_accounts_all_parameters : {}
@@ -71,7 +72,8 @@ resource "aws_organizations_account" "commercial" {
   }
 }
 
-# If Control Tower is enabled, and the account is in the Sandbox or Security OU, place it in the root
+# If Control Tower is enabled, and the account is in the Sandbox or Security OU, place it in the root,
+#   Control Tower will move it to the appropriate OU later, so we ignore changes to parent_id
 # If Control Tower is not enabled, place it in the specified OU or root if OU is "Root"
 resource "aws_organizations_account" "govcloud" {
   for_each = data.aws_partition.current.partition == "aws-us-gov" ? var.all_accounts_all_parameters : {}
