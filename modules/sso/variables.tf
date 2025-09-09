@@ -114,12 +114,14 @@ variable "enable_sso_management" {
   default     = true
 }
 
+# TODO: remove this in favor of just using var.enable_sso_management
 variable "auto_detect_control_tower" {
   description = "Whether to automatically detect if Control Tower is managing Identity Center and disable SSO management accordingly."
   type        = bool
   default     = true
 }
 
+# TODO: remove this, assume the caller will not have deployed IAM Identity Center yet and so no user will exist
 variable "existing_admin_user_id" {
   description = <<-EOT
     **RECOMMENDED**: User ID of an existing SSO user to grant admin access for Day 1 protection.
