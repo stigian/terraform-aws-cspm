@@ -68,6 +68,7 @@ resource "aws_guardduty_organization_configuration_feature" "s3_protection" {
   depends_on = [aws_guardduty_organization_configuration.this]
 }
 
+# TODO: refactor additional configuration to accept variables for auto_enable settings
 # Priority 1: Runtime Monitoring - eBPF-based OS-level monitoring for EC2/EKS/ECS
 resource "aws_guardduty_organization_configuration_feature" "runtime_monitoring" {
   count       = var.enable_runtime_monitoring ? 1 : 0
@@ -75,6 +76,21 @@ resource "aws_guardduty_organization_configuration_feature" "runtime_monitoring"
   detector_id = aws_guardduty_detector.audit.id
   name        = "RUNTIME_MONITORING"
   auto_enable      = "ALL"
+
+  additional_configuration {
+    name = "ECS_FARGATE_AGENT_MANAGEMENT"
+    auto_enable = "NONE"
+  }
+
+  additional_configuration {
+    name = "EC2_AGENT_MANAGEMENT"
+    auto_enable = "NONE"
+  }
+
+  additional_configuration {
+    name = "EKS_ADDON_MANAGEMENT"
+    auto_enable = "NONE"
+  }
 
   depends_on = [aws_guardduty_organization_configuration.this]
 }
