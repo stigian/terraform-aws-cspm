@@ -19,7 +19,7 @@ resource "aws_securityhub_organization_configuration" "this" {
 
   depends_on = [
     aws_securityhub_organization_admin_account.this,
-    aws_securityhub_finding_aggregator.this,
+    length(var.aggregator_specified_regions) > 0 ? aws_securityhub_finding_aggregator.specified_regions[0] : aws_securityhub_finding_aggregator.all_regions[0],
   ]
 }
 
