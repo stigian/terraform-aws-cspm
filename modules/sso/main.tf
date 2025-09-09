@@ -22,15 +22,6 @@ check "existing_admin_user_exists" {
   }
 }
 
-# Load AWS Security Reference Architecture (SRA) Account Types from YAML
-# These match accreditation requirements and cannot be changed
-locals {
-  sra_account_types = yamldecode(file("${path.module}/../../config/sra-account-types.yaml"))
-
-  # Extract just the account type names for validation
-  valid_account_types = keys(local.sra_account_types)
-}
-
 ###############################################################################
 # Control Tower Detection
 ###############################################################################
