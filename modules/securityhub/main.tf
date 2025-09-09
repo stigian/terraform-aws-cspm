@@ -84,9 +84,21 @@ resource "aws_securityhub_insight" "high" {
   ]
 }
 
-resource "aws_securityhub_finding_aggregator" "this" {
+# For ALL_REGIONS linking mode (when specified_regions is empty)
+resource "aws_securityhub_finding_aggregator" "all_regions" {
+  count        = length(var.aggregator_specified_regions) == 0 ? 1 : 0
+  provider     = aws.audit
+  linking_mode = "ALL_REGIONS"
+
+  depends_on   = [aws_securityhub_organization_admin_account.this]
+}
+
+# For SPECIFIED_REGIONS linking mode (when specified_regions has items)
+resource "aws_securityhub_finding_aggregator" "specified_regions" {
+  count             = length(var.aggregator_specified_regions) > 0 ? 1 : 0
   provider          = aws.audit
-  linking_mode      = var.aggregator_linking_mode
+  linking_mode      = "SPECIFIED_REGIONS"
   specified_regions = var.aggregator_specified_regions
+
   depends_on        = [aws_securityhub_organization_admin_account.this]
 }
