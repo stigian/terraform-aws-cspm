@@ -88,9 +88,17 @@ variable "account_role_mapping" {
   validation {
     condition = alltrue([
       for role in values(var.account_role_mapping) :
-      contains(keys(yamldecode(file("${path.module}/../../config/sra-account-types.yaml"))), role)
+      contains([
+        "management",
+        "log_archive",
+        "audit",
+        "security_tooling",
+        "network",
+        "shared_services",
+        "workload"
+      ], role)
     ])
-    error_message = "Account roles must be valid SRA types. See config/sra-account-types.yaml for supported types."
+    error_message = "Account roles must be valid SRA types: management, log_archive, audit, security_tooling, network, shared_services, workload"
   }
 }
 

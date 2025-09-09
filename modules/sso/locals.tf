@@ -1,4 +1,56 @@
 locals {
+  # AWS Security Reference Architecture (SRA) Account Types
+  # These match AWS SRA and accreditation requirements and should not be changed
+  # without careful consideration of compliance implications.
+  sra_account_types = {
+    # Core Foundation (Required by Control Tower)
+    management = {
+      name         = "management"
+      display_name = "Management Account"
+      required_ou  = "Root"
+      description  = "AWS Organization management account"
+    }
+    log_archive = {
+      name         = "log_archive"
+      display_name = "Log Archive Account"
+      required_ou  = "Security"
+      description  = "Centralized logging and log storage"
+    }
+    audit = {
+      name         = "audit"
+      display_name = "Audit Account"
+      required_ou  = "Security"
+      description  = "Security audit and compliance"
+    }
+    # Security OU Accounts
+    security_tooling = {
+      name         = "security_tooling"
+      display_name = "Security Tooling Account"
+      required_ou  = "Security"
+      description  = "Security tools, SIEM, and scanning"
+    }
+    # Infrastructure OU Accounts
+    network = {
+      name         = "network"
+      display_name = "Network Account"
+      required_ou  = "Infrastructure"
+      description  = "Central network connectivity (TGW, DirectConnect)"
+    }
+    shared_services = {
+      name         = "shared_services"
+      display_name = "Shared Services Account"
+      required_ou  = "Infrastructure"
+      description  = "Shared infrastructure services (DNS, monitoring)"
+    }
+    # Workloads OU Accounts
+    workload = {
+      name         = "workload"
+      display_name = "Workload Account"
+      required_ou  = "Workloads"
+      description  = "Application workload accounts"
+    }
+  }
+
   # TODO: add view only role to sso and entra
   # TODO: incorporate PIM for Global Administrator and AWS Administrator
 
