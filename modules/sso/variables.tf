@@ -132,7 +132,7 @@ variable "auto_detect_control_tower" {
 # TODO: remove this, assume the caller will not have deployed IAM Identity Center yet and so no user will exist
 variable "existing_admin_user_id" {
   description = <<-EOT
-    **RECOMMENDED**: User ID of an existing SSO user to grant admin access for Day 1 protection.
+    User ID of an existing SSO user to grant admin access (optional).
 
     If you already have an SSO user (e.g., your personal user), provide the User ID here
     and that user will be automatically added to admin groups for all accounts.
@@ -142,8 +142,7 @@ variable "existing_admin_user_id" {
     2. Click on your username
     3. Copy the "User ID" field (format: 1234567890-abcd-efgh-ijkl-123456789012)
 
-    If this is provided, no new users will be created automatically.
-    If this is null/empty, you MUST provide initial_admin_users to prevent Day 1 lockout.
+    This is completely optional since regular IAM logins can be used as fallback.
   EOT
   type        = string
   default     = null
@@ -151,10 +150,7 @@ variable "existing_admin_user_id" {
 
 variable "initial_admin_users" {
   description = <<-EOT
-    List of admin users to create in AWS IAM Identity Center.
-
-    **REQUIRED** if existing_admin_user_id is not provided (to prevent Day 1 lockout).
-    **OPTIONAL** if existing_admin_user_id is provided (for additional users).
+    List of admin users to create in AWS IAM Identity Center (optional).
 
     Each user object should contain:
     - user_name: Unique username for SSO login (e.g., "john.doe" or "admin")
@@ -200,11 +196,5 @@ variable "initial_admin_users" {
       for user in var.initial_admin_users : can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", user.email))
     ])
     error_message = "All email addresses must be valid email format."
-  }
-
-  # Ensure Day 1 protection: either existing user OR new users must be provided
-  validation {
-    condition     = var.existing_admin_user_id != null || length(var.initial_admin_users) > 0
-    error_message = "Either existing_admin_user_id must be provided OR initial_admin_users must contain at least one user to prevent Day 1 lockout."
   }
 }

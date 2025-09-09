@@ -54,10 +54,10 @@ locals {
   # TODO: add view only role to sso and entra
   # TODO: incorporate PIM for Global Administrator and AWS Administrator
 
-  # Combine existing admin user (if provided) with new users to create
+  # Use admin users from variable (may be empty - that's fine since IAM fallback is available)
   all_admin_users = var.initial_admin_users
 
-  # Create group memberships for both existing and new users
+  # Create group memberships for both existing and new users (all optional)
   initial_admin_group_memberships = merge(
     # Group memberships for existing admin user (if provided)
     var.existing_admin_user_id != null ? {
