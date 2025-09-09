@@ -85,16 +85,16 @@ resource "aws_securityhub_insight" "high" {
   ]
 }
 
-# For ALL_REGIONS linking mode (when specified_regions is empty)
-resource "aws_securityhub_finding_aggregator" "all_regions" {
+# For NO_REGIONS linking mode (when specified_regions is empty), only the home region is monitored
+resource "aws_securityhub_finding_aggregator" "no_regions" {
   count        = length(var.aggregator_specified_regions) == 0 ? 1 : 0
   provider     = aws.audit
-  linking_mode = "ALL_REGIONS"
+  linking_mode = "NO_REGIONS"
 
   depends_on   = [aws_securityhub_organization_admin_account.this]
 }
 
-# For SPECIFIED_REGIONS linking mode (when specified_regions has items)
+# For SPECIFIED_REGIONS linking mode (when specified_regions has items), the home region + specified regions are monitored
 resource "aws_securityhub_finding_aggregator" "specified_regions" {
   count             = length(var.aggregator_specified_regions) > 0 ? 1 : 0
   provider          = aws.audit
