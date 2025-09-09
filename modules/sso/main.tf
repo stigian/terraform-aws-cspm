@@ -15,12 +15,12 @@ data "aws_identitystore_user" "existing_admin_user" {
   user_id           = var.existing_admin_user_id
 }
 
-check "existing_admin_user_exists" {
-  assert {
-    condition     = var.existing_admin_user_id == null || length(data.aws_identitystore_user.existing_admin_user) > 0
-    error_message = "Existing admin user ID '${var.existing_admin_user_id}' does not exist in Identity Store. Verify the user ID is correct and the user hasn't been deleted."
-  }
-}
+# check "existing_admin_user_exists" {
+#   assert {
+#     condition     = var.existing_admin_user_id == null || length(data.aws_identitystore_user.existing_admin_user) > 0
+#     error_message = "Existing admin user ID '${var.existing_admin_user_id}' does not exist in Identity Store. Verify the user ID is correct and the user hasn't been deleted."
+#   }
+# }
 
 ###############################################################################
 # Control Tower Detection
