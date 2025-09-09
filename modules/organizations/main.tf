@@ -67,6 +67,7 @@ resource "aws_organizations_account" "commercial" {
 
   lifecycle {
     prevent_destroy = true # prevents accidental deletion
+    ignore_changes = [ parent_id ] # prevent contention between Control Tower and Organizations module
   }
 }
 
@@ -88,7 +89,10 @@ resource "aws_organizations_account" "govcloud" {
   )
 
   lifecycle {
-    ignore_changes  = [name] # can only be changed from commercial account
     prevent_destroy = true   # prevents accidental deletion
+    ignore_changes  = [
+      name, # can only be changed from commercial account
+      parent_id, # prevent contention between Control Tower and Organizations module
+    ]
   }
 }
