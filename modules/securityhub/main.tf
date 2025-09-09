@@ -19,8 +19,7 @@ resource "aws_securityhub_organization_configuration" "this" {
 
   depends_on = [
     aws_securityhub_organization_admin_account.this,
-    aws_securityhub_finding_aggregator.all_regions,
-    aws_securityhub_finding_aggregator.specified_regions,
+    aws_securityhub_finding_aggregator.this,
   ]
 }
 
@@ -85,21 +84,9 @@ resource "aws_securityhub_insight" "high" {
   ]
 }
 
-# For NO_REGIONS linking mode (when specified_regions is empty), only the home region is monitored
-resource "aws_securityhub_finding_aggregator" "no_regions" {
-  count        = length(var.aggregator_specified_regions) == 0 ? 1 : 0
-  provider     = aws.audit
-  linking_mode = "NO_REGIONS"
-
-  depends_on   = [aws_securityhub_organization_admin_account.this]
-}
-
-# For SPECIFIED_REGIONS linking mode (when specified_regions has items), the home region + specified regions are monitored
-resource "aws_securityhub_finding_aggregator" "specified_regions" {
-  count             = length(var.aggregator_specified_regions) > 0 ? 1 : 0
+resource "aws_securityhub_finding_aggregator" "this" {
   provider          = aws.audit
-  linking_mode      = "SPECIFIED_REGIONS"
+  linking_mode      = var.aggregator_linking_mode
   specified_regions = var.aggregator_specified_regions
-
   depends_on        = [aws_securityhub_organization_admin_account.this]
 }
