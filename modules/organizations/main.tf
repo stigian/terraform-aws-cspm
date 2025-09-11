@@ -23,7 +23,6 @@ resource "aws_organizations_organization" "this" {
     "guardduty.amazonaws.com",
     "inspector2.amazonaws.com",
     "member.org.stacksets.cloudformation.amazonaws.com",
-    "ram.amazonaws.com",
     "securityhub.amazonaws.com",
     "sso.amazonaws.com",
   ]
