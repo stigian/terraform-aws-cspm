@@ -51,9 +51,6 @@ locals {
     }
   }
 
-  # TODO: add view only role to sso and entra
-  # TODO: incorporate PIM for Global Administrator and AWS Administrator
-
   # Use admin users from variable (may be empty - that's fine since IAM fallback is available)
   all_admin_users = var.initial_admin_users
 
@@ -84,7 +81,7 @@ locals {
     shared_services  = ["aws_admin", "aws_cyber_sec_eng", "aws_net_admin", "aws_power_user", "aws_sys_admin"]
     security_tooling = ["aws_admin", "aws_cyber_sec_eng", "aws_sec_auditor"]
     backup           = ["aws_admin", "aws_cyber_sec_eng", "aws_sys_admin"]
-    workload         = ["aws_admin", "aws_power_user", "aws_cyber_sec_eng", "aws_sec_auditor", "aws_sys_admin"]
+    workload         = ["aws_admin", "aws_workload_admin", "aws_cyber_sec_eng", "aws_sec_auditor"]
   }
 
   # This transforms the account_id_map into a structure that includes which groups
@@ -139,6 +136,11 @@ locals {
       display_name       = "${var.project}-AwsSysAdmin"
       description        = "Grants full access permissions necessary for resources required for application and development operations."
       managed_policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/job-function/SystemAdministrator"
+    }
+    aws_workload_admin = {
+      display_name       = "${var.project}-AwsWorkloadAdmin"
+      description        = "Workload-specific administrative access limited to application resources within the account boundary."
+      managed_policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/PowerUserAccess"
     }
   }
 }

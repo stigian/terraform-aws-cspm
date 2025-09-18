@@ -64,8 +64,7 @@ module "controltower_admin" { # change to controltower_admin
 }
 
 # Adds AWSControlTowerExecution role to non-LZ accounts
-# AWS Control Tower will not automatically enroll non-Landing Zone accounts, you must do this from
-# the management account Control Tower service page in the Organization tab.
+# TODO: remove this module, based on testing the above controltower_admin module is sufficient
 module "controltower_members" {
   source = "../modules/controltower/member"
 
@@ -90,7 +89,7 @@ module "sso" {
   account_role_mapping      = local.account_role_mapping
   enable_sso_management     = true
   auto_detect_control_tower = true
-  existing_admin_user_id    = "8891c238-90a1-70e8-bf6c-0438721ecc9d" # UPDATE THIS with your actual User ID!
+  # existing_admin_user_id    = "8891c238-90a1-70e8-bf6c-0438721ecc9d" # UPDATE THIS with your actual User ID!
 
   # Optional: Create additional admin users if needed
   # initial_admin_users = [
