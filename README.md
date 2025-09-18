@@ -85,7 +85,7 @@ graph TD
 - [ ] **OpenTofu 1.6+**: This project uses OpenTofu (not Terraform)
 - [ ] **AWS CLI**: For account creation (required first step)
 - [ ] **OrganizationAccountAccessRole**: Cross-account roles in each member account with trust relationships to the management account
-- [ ] **Account Planning**: Review and modify YAML configuration structure in `examples/config/` to suit your organization
+- [ ] **Account Planning**: Review and modify YAML configuration structure in `examples/inputs/` to suit your organization
 
 ### 1. Create AWS Organization
 
