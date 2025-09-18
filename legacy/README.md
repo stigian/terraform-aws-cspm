@@ -1,0 +1,1 @@
+This directory contains old monolith code that is still being reviewed/refactored. It will eventually be removed.
