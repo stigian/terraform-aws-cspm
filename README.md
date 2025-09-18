@@ -220,3 +220,18 @@ Customizations to IAM Identity Center (for example, switching to an external ide
 `terraform destroy` or `tofu destroy` is NOT sufficient to fully clean up all AWS resources created by this module. The AWS Provider has inherent limitations and does not implement complete destroy logic for many AWS services, particularly organizational and security services.
 
 For complete environment cleanup, use aws-nuke: https://aws-nuke.ekristen.dev/
+
+## References
+
+This project incorporates best practices and patterns from multiple sources, as well years of experience building and authorizing secure AWS environments. The design is heavily influenced by the AWS Security Reference Architecture (AWS SRA) and the AWS Landing Zone Accelerator, adapted to meet DoD Zero Trust requirements and based on lessons learned from real-world deployments.
+
+**Key references:**
+- [AWS Security Reference Architecture (AWS Docs)](https://docs.aws.amazon.com/prescriptive-guidance/latest/security-reference-architecture/architecture.html)
+- [AWS Landing Zone Accelerator (AWS Docs)](https://docs.aws.amazon.com/solutions/latest/landing-zone-accelerator-on-aws/solution-overview.html)
+- [AWS Multi-Account Strategy for AWS Control Tower Landing Zone](https://docs.aws.amazon.com/controltower/latest/userguide/aws-multi-account-landing-zone.html)
+- [AWS Config Best Practices](https://aws.amazon.com/blogs/mt/aws-config-best-practices/)
+- [Amazon GuardDuty Security Best Practices](https://aws.github.io/aws-security-services-best-practices/guides/guardduty/)
+- [Amazon Inspector Security Best Practices](https://aws.github.io/aws-security-services-best-practices/guides/inspector/)
+- [Amazon Detective Security Best Practices](https://aws.github.io/aws-security-services-best-practices/guides/detective/)
+- [AWS Security Hub Security Best Practices](https://aws.github.io/aws-security-services-best-practices/guides/securityhub/)
+- [AWS Prescriptive Guidance for Secure Cloud Computing Architecture on AWS for the US Department of Defense](https://docs.aws.amazon.com/prescriptive-guidance/latest/secure-architecture-dod/scca-components-and-requirements.html)
