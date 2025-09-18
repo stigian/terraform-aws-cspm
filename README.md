@@ -1,8 +1,13 @@
 # DoD Zero Trust CSPM
 
-Modular OpenTofu implementation of DISA Secure Cloud Computing Architecture (SCCA) with cross-account security services for AWS multi-account environments.
+This repository implements the CSPM (Cloud Security Posture Management) component used in our Cloud Native SCCA (CNSCCA) product architecture. Important notes:
 
-This module can be used to deploy a pragmatic AWS multi-account organization with DISA SCCA-compliant security services. Common deployment examples can be found in [examples/](./examples).
+- CNSCCA (Cloud Native SCCA) is an overarching product that integrates multiple components into a full SCCA solution (orchestration, pipelines, policy automation and documentation). CNSCCA is a separate project and is not contained in this repository.
+- CNAP-AWS is a separate project that implements the core networking and workload platform (VPCs, TGW, SDN, Network Firewall, WAF, load balancing, etc.). It is not part of this repository.
+- `terraform-aws-cspm` (this repo) provides the CSPM/security service implementation and multi-account security patterns (GuardDuty, Security Hub, Detective, Inspector2, AWS Config, etc.).
+
+If you want to learn more about CNSCCA or CNAP-AWS, please contact the maintainers or open an issue in this repository and we'll connect you with the appropriate project owners. This repo focuses on the CSPM modules and patterns; orchestration of the full SCCA (CNSCCA) combines this repository with other projects such as CNAP-AWS.
+
 
 ## Module Architecture
 
@@ -21,6 +26,56 @@ This implementation provides 8 specialized modules:
 - `inspector2` - Vulnerability assessment
 
 All security services use the audit account as delegated administrator with automatic member account enrollment.
+
+After deployment is complete your AWS Organization will look like this:
+
+```mermaid
+graph TD
+    subgraph AWSOrg["AWS Organizations"]
+
+        subgraph RootOU["Root OU"]
+            A["Management Account<br/><b>Contains:</b><br/>• Control Tower<br/>• IAM Identity Center"]
+        end
+
+        subgraph SecurityOU["Security OU"]
+            Audit["Audit Account<br/><b>Delegated Admins:</b><br/>• GuardDuty<br/>• Detective<br/>• Security Hub<br/>• AWS Config<br/>• Inspector2"]
+            Log[Log Archive Account]
+        end
+
+        subgraph InfraNonProd["Infrastructure_NonProd OU"]
+            Network[Core Network Account]
+        end
+
+        subgraph InfraProd["Infrastructure_Prod OU"]
+            InfraProdEmpty[(Initially empty)]
+            InfraProdNote[["Note: Prod infra should be promoted from NonProd after validation"]]
+        end
+
+        subgraph SandboxOU["Sandbox OU"]
+            SandboxEmpty[(Initially empty)]
+        end
+
+        subgraph WorkloadsProd["Workloads_Prod OU"]
+            WPNote[["Note: Promote workloads to Prod after testing and validation"]]
+            WPEmpty[(Initially empty)]
+        end
+
+        subgraph WorkloadsNonProd["Workloads_NonProd OU"]
+            W["Workload Accounts (1..n)<br/><b>Security Services Active:</b><br/>• GuardDuty<br/>• Detective<br/>• Security Hub<br/>• AWS Config<br/>• Inspector2"]
+        end
+
+        subgraph SuspendedOU["Suspended OU"]
+            SuspendedEmpty[(Initially empty)]
+        end
+
+        subgraph PolicyStaging["Policy_Staging OU"]
+            PolicyEmpty[(Initially empty)]
+        end
+
+    end
+
+    %% (Log flow arrow removed per diagram simplification)
+```
 
 ## Prerequisites
 
