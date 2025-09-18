@@ -1,120 +1,3 @@
-
-# Control Tower Module
-
-## Overview
-
-This module deploys AWS Control Tower Landing Zone with enhanced security features for DoD Zero Trust CSPM environments. It establishes governance guardrails, centralized logging, and automated account provisioning while integrating with organizational KMS infrastructure.
-
-**Key Architecture Pattern**: Conditional landing zone deployment with `deploy_landing_zone` flag - allows KMS-only setup for manual Control Tower configuration or integration with existing Control Tower deployments.
-
-## Architecture Pattern
-
-### Landing Zone Foundation
-- **Control Tower Deployment**: Optional full landing zone with guardrails and baseline controls
-- **KMS Integration**: Enhanced encryption with organizational boundaries and SSO-aware policies
-- **Multi-Account Governance**: Automated guardrails across Security, Workloads, and Sandbox OUs
-- **Partition Support**: Automatically handles Commercial and GovCloud deployment differences
-
-### Resource Management Strategy
-When `deploy_landing_zone = true`:
-- Creates complete Control Tower landing zone with required IAM roles
-- Deploys organizational guardrails and baseline security controls
-- Establishes centralized CloudTrail and Config configuration
-- Requires management, log_archive, and audit account IDs
-
-When `deploy_landing_zone = false`:
-- Creates only KMS resources for Control Tower integration
-- Allows manual Control Tower setup or integration with existing deployments
-- Supports scenarios where Control Tower is managed outside Terraform
-
-### SSO Integration Features
-- **Self-Managed SSO**: Default `self_managed_sso = true` disables Control Tower SSO management
-- **KMS Policy Integration**: Automatically includes SSO Administrator role ARNs in KMS policies
-- **Role-Based Access**: Supports additional KMS admin ARNs for specific users and roles
-
-## Deployment Requirements
-
-### Prerequisites
-1. **Account Structure**: Requires existing management, log_archive, and audit accounts (from Organizations module)
-   ```hcl
-   module "controltower" {
-     source = "./modules/controltower"
-     
-     management_account_id   = "123456789012"  # From organizations output
-     log_archive_account_id  = "123456789013"  # From organizations output  
-     audit_account_id        = "123456789014"  # From organizations output
-   }
-   ```
-
-2. **IAM Permissions**: Management account must have Control Tower service permissions
-3. **Regional Requirements**: Must deploy in Control Tower supported regions (us-east-1, us-gov-west-1, etc.)
-
-### Configuration Variables
-- **`deploy_landing_zone`**: Boolean controlling full deployment vs KMS-only mode
-- **`self_managed_sso`**: Boolean disabling Control Tower SSO management (default: true)
-- **`additional_kms_key_admin_arns`**: List of additional IAM ARNs for KMS administration
-- **Required Account IDs**: management_account_id, log_archive_account_id, audit_account_id
-
-### Provider Requirements
-```hcl
-provider "aws" {
-  region  = "us-gov-west-1"  # GovCloud deployments
-  profile = "management-account-profile"
-}
-```
-
-## Troubleshooting
-
-### Landing Zone Deployment Issues
-1. **Previous Control Tower Cleanup**: Manual cleanup required if Control Tower was previously decommissioned
-2. **Account Validation Failures**: Verify account IDs are 12-digit strings and accounts exist
-3. **Regional Constraints**: Ensure deployment region supports Control Tower (limited regions available)
-
-### KMS Key Management Problems
-- **Policy Conflicts**: Check additional_kms_key_admin_arns for valid IAM ARN format
-- **SSO Integration Issues**: Verify SSO Administrator roles exist when self_managed_sso = true
-- **Cross-Account Access**: Ensure organizational boundaries allow intended account access
-
-### Role Creation Failures
-```hcl
-# Check for existing roles that may conflict
-aws iam get-role --role-name AWSControlTowerServiceRoleForManagement
-```
-
-## Integration with Other Modules
-
-### Organizations Module Integration
-- **Account Requirements**: Consumes management, log_archive, and audit account IDs from organizations outputs
-- **OU Coordination**: Works with organizations module to establish Security and Sandbox OUs
-- **Foundation Dependency**: Must deploy after organizations module establishes account structure
-
-### SSO Module Integration
-- **Self-Managed Mode**: Default configuration allows SSO module to manage IAM Identity Center independently
-- **KMS Policy Integration**: Automatically includes SSO Administrator roles in KMS key policies
-- **Access Management**: Supports SSO-based access patterns for Control Tower administration
-
-### Security Services Integration
-- **Centralized Logging**: Provides CloudTrail foundation for security service monitoring
-- **Config Integration**: Establishes configuration compliance baseline for security services
-- **Audit Account Foundation**: Supports audit account as delegated administrator for security services
-
-## DoD-Specific Considerations
-
-### GovCloud Deployment Patterns
-- **Partition Detection**: Automatically adjusts ARN formats and service availability for GovCloud
-- **Regional Limitations**: Supports us-gov-west-1 and us-gov-east-1 Control Tower availability
-- **Compliance Controls**: Implements Control Tower guardrails aligned with DoD security requirements
-
-### Enterprise Security Features
-- **Enhanced KMS Security**: Organizational boundaries prevent cross-organization access
-- **SSO-Aware Policies**: Integrates with enterprise identity management patterns
-- **Audit Trail Integration**: Supports DoD audit and compliance reporting requirements
-
-### Operational Constraints
-- **Landing Zone Lifecycle**: Control Tower landing zones cannot be easily destroyed - requires careful planning
-- **Manual Integration Points**: Some Control Tower features require manual configuration outside Terraform
-- **Service Role Management**: Control Tower service roles created with specific organizational permissions
-
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -205,7 +88,7 @@ This module implements AWS Security Reference Architecture patterns:
 ### Security Guardrails
 
 - **Preventive Guardrails**: Block non-compliant actions
-- **Detective Guardrails**: Alert on suspicious activities  
+- **Detective Guardrails**: Alert on suspicious activities
 - **Proactive Guardrails**: Automatically remediate issues
 - **Data Residency**: Ensure data stays within approved regions
 
@@ -218,16 +101,16 @@ This module implements AWS Security Reference Architecture patterns:
 ```hcl
 module "controltower" {
   source = "../modules/controltower"
-  
+
   # Required: Core account IDs for Control Tower
   management_account_id  = "123456789012"
   log_archive_account_id = "234567890123"
   audit_account_id       = "345678901234"
-  
+
   # Optional: Control deployment
   deploy_landing_zone = true
   self_managed_sso    = true
-  
+
   # Optional: Customization
   project     = "myorg"
   aws_region  = "us-west-2"
@@ -243,19 +126,19 @@ module "controltower" {
 ```hcl
 module "organizations" {
   source = "../modules/organizations"
-  
+
   project                = "myorg"
   aws_account_parameters = var.aws_account_parameters
 }
 
 module "controltower" {
   source = "../modules/controltower"
-  
+
   # Clean integration using organizations output
   management_account_id  = module.organizations.management_account_id
   log_archive_account_id = module.organizations.log_archive_account_id
   audit_account_id       = module.organizations.audit_account_id
-  
+
   project    = module.organizations.project
   global_tags = module.organizations.global_tags
 }
@@ -309,7 +192,7 @@ module "organizations" {
 
 module "controltower" {
   source = "../modules/controltower"
-  
+
   management_account_id  = module.organizations.management_account_id
   log_archive_account_id = module.organizations.log_archive_account_id
   audit_account_id       = module.organizations.audit_account_id
@@ -317,7 +200,7 @@ module "controltower" {
 
 module "sso" {
   source = "../modules/sso"
-  
+
   project                = module.organizations.project
   account_id_map         = module.organizations.account_id_map
   auto_detect_control_tower = true
@@ -330,11 +213,11 @@ module "sso" {
 # Deploy just Control Tower with hardcoded account IDs
 module "controltower" {
   source = "../modules/controltower"
-  
+
   management_account_id  = "123456789012"
-  log_archive_account_id = "234567890123" 
+  log_archive_account_id = "234567890123"
   audit_account_id       = "345678901234"
-  
+
   deploy_landing_zone = true
 }
 ```
@@ -350,7 +233,7 @@ data "aws_ssm_parameter" "account_ids" {
 
 module "controltower" {
   source = "../modules/controltower"
-  
+
   management_account_id  = data.aws_ssm_parameter.account_ids["management"].value
   log_archive_account_id = data.aws_ssm_parameter.account_ids["log_archive"].value
   audit_account_id       = data.aws_ssm_parameter.account_ids["audit"].value
