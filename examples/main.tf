@@ -160,10 +160,10 @@ module "awsconfig_admin" {
     aws.audit      = aws.audit
   }
 
-  audit_account_id    = local.audit_account_id
-  organization_id     = var.aws_organization_id
-  global_tags         = var.global_tags
-  aggregator_name     = "${var.project}-org-config-aggregator"
+  audit_account_id = local.audit_account_id
+  organization_id  = var.aws_organization_id
+  global_tags      = var.global_tags
+  aggregator_name  = "${var.project}-org-config-aggregator"
 
   depends_on = [module.controltower_admin]
 }
