@@ -127,7 +127,7 @@ aws iam get-role --role-name AWSControlTowerServiceRoleForManagement
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.4.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 5.0.0 |
 
 ## Modules
 
@@ -151,7 +151,11 @@ No modules.
 | [aws_kms_key.control_tower](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kms_key) | resource |
 | [aws_kms_key_policy.control_tower](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kms_key_policy) | resource |
 | [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
+| [aws_iam_policy.controltower_admin](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy) | data source |
 | [aws_organizations_organization.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/organizations_organization) | data source |
+| [aws_organizations_resource_tags.audit](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/organizations_resource_tags) | data source |
+| [aws_organizations_resource_tags.log_archive](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/organizations_resource_tags) | data source |
+| [aws_organizations_resource_tags.management](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/organizations_resource_tags) | data source |
 | [aws_partition.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/partition) | data source |
 
 ## Inputs
@@ -163,6 +167,7 @@ No modules.
 | <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS region where resources will be created. Auto-detected from provider if not specified. | `string` | `null` | no |
 | <a name="input_deploy_landing_zone"></a> [deploy\_landing\_zone](#input\_deploy\_landing\_zone) | Whether to deploy the AWS Control Tower Landing Zone.<br/><br/>When true: Deploys full Control Tower landing zone with guardrails and baseline controls<br/>When false: Only creates KMS resources, allowing manual Control Tower setup or existing setup<br/><br/>REQUIREMENT: If true, you must provide management\_account\_id, log\_archive\_account\_id, and audit\_account\_id | `bool` | `true` | no |
 | <a name="input_global_tags"></a> [global\_tags](#input\_global\_tags) | Tags applied to all resources created by this module. | `map(string)` | <pre>{<br/>  "ManagedBy": "opentofu"<br/>}</pre> | no |
+| <a name="input_governed_regions"></a> [governed\_regions](#input\_governed\_regions) | List of AWS regions to be governed by Control Tower. | `list(string)` | <pre>[<br/>  "us-gov-west-1",<br/>  "us-gov-east-1"<br/>]</pre> | no |
 | <a name="input_log_archive_account_id"></a> [log\_archive\_account\_id](#input\_log\_archive\_account\_id) | Account ID for the Control Tower log archive account. | `string` | n/a | yes |
 | <a name="input_management_account_id"></a> [management\_account\_id](#input\_management\_account\_id) | Account ID for the AWS Organization management account. | `string` | n/a | yes |
 | <a name="input_project"></a> [project](#input\_project) | Name of the project or application. Used for resource naming and tagging. | `string` | `"CnScca"` | no |

@@ -159,14 +159,14 @@ No modules.
 | Name | Type |
 |------|------|
 | [aws_guardduty_detector.audit](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/guardduty_detector) | resource |
-| [aws_guardduty_detector_feature.eks_protection](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/guardduty_detector_feature) | resource |
-| [aws_guardduty_detector_feature.lambda_protection](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/guardduty_detector_feature) | resource |
-| [aws_guardduty_detector_feature.malware_protection_ec2](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/guardduty_detector_feature) | resource |
-| [aws_guardduty_detector_feature.rds_protection](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/guardduty_detector_feature) | resource |
-| [aws_guardduty_detector_feature.runtime_monitoring](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/guardduty_detector_feature) | resource |
-| [aws_guardduty_detector_feature.s3_protection](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/guardduty_detector_feature) | resource |
 | [aws_guardduty_organization_admin_account.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/guardduty_organization_admin_account) | resource |
 | [aws_guardduty_organization_configuration.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/guardduty_organization_configuration) | resource |
+| [aws_guardduty_organization_configuration_feature.eks_protection](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/guardduty_organization_configuration_feature) | resource |
+| [aws_guardduty_organization_configuration_feature.lambda_protection](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/guardduty_organization_configuration_feature) | resource |
+| [aws_guardduty_organization_configuration_feature.malware_protection_ec2](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/guardduty_organization_configuration_feature) | resource |
+| [aws_guardduty_organization_configuration_feature.rds_protection](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/guardduty_organization_configuration_feature) | resource |
+| [aws_guardduty_organization_configuration_feature.runtime_monitoring](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/guardduty_organization_configuration_feature) | resource |
+| [aws_guardduty_organization_configuration_feature.s3_protection](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/guardduty_organization_configuration_feature) | resource |
 
 ## Inputs
 
@@ -188,10 +188,5 @@ No modules.
 
 | Name | Description |
 |------|-------------|
-| <a name="output_audit_detector_id"></a> [audit\_detector\_id](#output\_audit\_detector\_id) | GuardDuty detector ID in the audit account (delegated admin) |
-| <a name="output_organization_admin_account_id"></a> [organization\_admin\_account\_id](#output\_organization\_admin\_account\_id) | Account ID designated as GuardDuty organization administrator |
-| <a name="output_organization_auto_enable"></a> [organization\_auto\_enable](#output\_organization\_auto\_enable) | Whether auto-enable is configured for organization members |
-| <a name="output_protection_plans_enabled"></a> [protection\_plans\_enabled](#output\_protection\_plans\_enabled) | Status of GuardDuty protection plans |
-| <a name="output_runtime_monitoring_feature_id"></a> [runtime\_monitoring\_feature\_id](#output\_runtime\_monitoring\_feature\_id) | GuardDuty Runtime Monitoring feature ID (if enabled) |
-| <a name="output_s3_protection_feature_id"></a> [s3\_protection\_feature\_id](#output\_s3\_protection\_feature\_id) | GuardDuty S3 Protection feature ID (if enabled) |
+| <a name="output_guardduty_status"></a> [guardduty\_status](#output\_guardduty\_status) | Complete GuardDuty deployment status including organization configuration and protection plans |
 <!-- END_TF_DOCS -->

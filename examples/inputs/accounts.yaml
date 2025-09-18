@@ -8,33 +8,26 @@
 #  - workload
 ###############################################################################
 management_account:
-  account_id: "227234344980"
-  account_name: "SCCA Root"
-  email: "nmmes-scca-test-org-root@stigian.com"
+  account_id: "111111111111"
+  account_name: "YourOrg Management"
+  email: "aws-management@yourorg.com"
   account_type: management
   ou: Root
   lifecycle: prod
   additional_tags:
-    Owner: "Central IT"
     Purpose: "Organization Management"
-    Compliance: "Required"
-    UIC: "123456"
   sso_groups:
     - aws_admin
 
-# Required
 network_account:
-  account_id: "261500508709"
-  account_name: "nmmes-zt-test-transit"
-  email: "nmmes-zt-test-transit@stigian.com"
+  account_id: "222222222222"
+  account_name: "YourOrg Network"
+  email: "aws-network@yourorg.com"
   account_type: network
   ou: Infrastructure_NonProd
   lifecycle: nonprod
   additional_tags:
-    Owner: "Network Team"
     Purpose: "Transit Gateway & Network Hub"
-    Environment: "Test"
-    UIC: "123456"
   sso_groups:
     - aws_admin
     - aws_net_admin
@@ -43,58 +36,48 @@ network_account:
     - aws_cyber_sec_eng
     - aws_sec_auditor
 
-# Required
 log_archive_account:
-  account_id: "261503748007"
-  account_name: "nmmes-zt-test-logging"
-  email: "nmmes-zt-test-logging@stigian.com"
+  account_id: "333333333333"
+  account_name: "YourOrg Log Archive"
+  email: "aws-log-archive@yourorg.com"
   account_type: log_archive
   ou: Security
   lifecycle: prod
   additional_tags:
-    Owner: "Security Team"
     Purpose: "Centralized Logging"
-    DataRetention: "7-years"
-    UIC: "123456"
   sso_groups:
     - aws_admin
     - aws_cyber_sec_eng
     - aws_sec_auditor
 
-# Required
 audit_account:
-  account_id: "261523644253"
-  account_name: "nmmes-zt-test-auth"
-  email: "nmmes-zt-test-auth@stigian.com"
+  account_id: "444444444444"
+  account_name: "YourOrg Audit"
+  email: "aws-audit@yourorg.com"
   account_type: audit
   ou: Security
   lifecycle: prod
   additional_tags:
-    Owner: "Security Team"
     Purpose: "Security Audit & Compliance"
-    Compliance: "Required"
   sso_groups:
     - aws_admin
     - aws_cyber_sec_eng
     - aws_sec_auditor
 
-# Required
-nmmes_zt_test_app:
-  account_id: "261632763096"
-  account_name: "nmmes-zt-test-app"
-  email: "nmmes-zt-test-app@stigian.com"
+workload_account_1:
+  account_id: "555555555555"
+  account_name: "YourOrg Workload"
+  email: "aws-workload@yourorg.com"
   account_type: workload
   ou: Workloads_NonProd
   lifecycle: nonprod
   additional_tags:
-    Owner: "Application Team"
     Purpose: "Application Workloads"
-    Environment: "Test"
-    UIC: "123456"
   sso_groups:
     - aws_admin
-    - aws_sys_admin
-    - aws_power_user
+    - aws_workload_admin
+    - aws_cyber_sec_eng
+    - aws_sec_auditor
 
 
 ###############################################################################

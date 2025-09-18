@@ -25,7 +25,7 @@ variable "aggregator_linking_mode" {
 }
 
 variable "aggregator_specified_regions" {
-  description = "List of regions to include in the Security Hub finding aggregator when using 'SPECIFIED_REGIONS' linking mode. Ignored when linking_mode is 'ALL_REGIONS'."
+  description = "List of regions to include in the Security Hub finding aggregator when using 'SPECIFIED_REGIONS' linking mode. Ignored when linking_mode is 'ALL_REGIONS'. The Security Hub home region is always included. This list should represent additional regions you want to include."
   type        = list(string)
-  default     = ["us-east-1", "us-west-2"]
+  default     = ["us-gov-east-1"]
 }

@@ -4,25 +4,13 @@ locals {
     Project = var.project
   })
 
-  # /Users/lance/Documents/dev/work/terraform-aws-cspm/examples/config/accounts.yaml
   raw_account_configs = yamldecode(file("${var.inputs_directory}/accounts.yaml"))
-  # merge([
-  #   for file in fileset("${var.inputs_directory}/accounts", "*.yaml") :
-  #   yamldecode(file("${var.inputs_directory}/accounts/${file}"))
-  # ]...)
 
-  # /Users/lance/Documents/dev/work/terraform-aws-cspm/examples/config/organizational_units.yaml
   raw_ou_configs = yamldecode(file("${var.inputs_directory}/organizational_units.yaml"))
-  # merge([
-  #   for file in fileset("${path.root}/${var.inputs_directory}/organizational-units", "*.yaml") :
-  #   yamldecode(file("${path.root}/${var.inputs_directory}/organizational-units/${file}"))
-  # ]...)
 
   # Load SRA account types for validation and mapping
   sra_account_types = yamldecode(file("${var.inputs_directory}/sra-account-types.yaml"))
 
-  # Transform accounts: Simple YAML → Organizations module format
-  # MAINTAINS RESOURCE KEYS: Uses account_id as key (same as current)
   aws_account_parameters = {
     for account_key, account_config in local.raw_account_configs :
     account_config.account_id => {
@@ -40,8 +28,6 @@ locals {
     }
   }
 
-  # Transform OUs: Simple YAML → Organizations module format
-  # MAINTAINS RESOURCE KEYS: Uses OU name as key (same as current)
   organizational_units = {
     for ou_name, ou_config in local.raw_ou_configs :
     ou_name => {
@@ -66,7 +52,6 @@ locals {
     if account_data.account_type != ""
   }
 
-  # Extract Control Tower required account IDs for easy access
   management_account_id = try([
     for account_id, account_data in local.aws_account_parameters :
     account_id if account_data.account_type == "management"
@@ -146,31 +131,18 @@ locals {
       "Invalid account_type for account ${account_id}: ${account.account_type} (not found in SRA account types)"
     if account.account_type != "" && !contains(keys(local.sra_account_types), account.account_type)]
   ) : []
-}
 
-/* SSO assignments normalization: single source of truth in accounts.yaml */
-locals {
   # Build map keyed by account_id with sso_groups list (defaults to empty list)
   sso_assignments_by_account_id = {
     for account_id, account_data in local.aws_account_parameters :
     account_id => lookup(try(local.raw_account_configs[account_data.name], {}), "sso_groups", [])
   }
-}
 
-# Configuration validation check
-check "yaml_configuration_validation" {
-  assert {
-    condition     = length(local.validation_errors) == 0
-    error_message = "YAML configuration validation failed:\n${join("\n", local.validation_errors)}"
-  }
-}
 
-# Slice all accounts map into different scopes
-locals {
-
+  # Slice all accounts map into different scopes
   # Account collection consisting of member accounts, excluding management, log_archive, and audit
   non_lz_accounts_map = {
-    for account_id, params in var.aws_account_parameters :
+    for account_id, params in local.aws_account_parameters :
     account_id => params
     if !(params.account_type == "management" || params.account_type == "log_archive" || params.account_type == "audit")
   }
@@ -178,7 +150,7 @@ locals {
 
   # Account collection consisting of all but the management account
   non_mgmt_accounts_map = {
-    for account_id, params in var.aws_account_parameters :
+    for account_id, params in local.aws_account_parameters :
     account_id => params
     if !(params.account_type == "management")
   }
@@ -186,7 +158,7 @@ locals {
 
   # Account collection consisting of all but the audit account
   non_audit_accounts_map = {
-    for account_id, params in var.aws_account_parameters :
+    for account_id, params in local.aws_account_parameters :
     account_id => params
     if !(params.account_type == "audit")
   }
@@ -198,9 +170,12 @@ locals {
 }
 
 
-
-
-
+check "yaml_configuration_validation" {
+  assert {
+    condition     = length(local.validation_errors) == 0
+    error_message = "YAML configuration validation failed:\n${join("\n", local.validation_errors)}"
+  }
+}
 
 
 locals {
@@ -228,7 +203,7 @@ locals {
         # expired_object_delete_marker = true
       }
 
-      # Keep the last 5 versions of a duplicate object for 30 days, then delete it
+      # Delete previous noncurrent versions after 30 days
       noncurrent_version_expiration = {
         newer_noncurrent_versions = 5
         days                      = 30
