@@ -1,0 +1,369 @@
+data "aws_partition" "current" {}
+data "aws_caller_identity" "current" {}
+data "aws_organizations_organization" "current" {}
+
+# Get tags for the required accounts to validate they have correct AccountType tags
+data "aws_organizations_resource_tags" "management" {
+  resource_id = var.management_account_id
+}
+
+data "aws_organizations_resource_tags" "log_archive" {
+  resource_id = var.log_archive_account_id
+}
+
+data "aws_organizations_resource_tags" "audit" {
+  resource_id = var.audit_account_id
+}
+
+# Validation checks for account types using OpenTofu check blocks
+check "management_account_type" {
+  assert {
+    condition     = lookup(data.aws_organizations_resource_tags.management.tags, "AccountType", "") == "management"
+    error_message = "Management account ${var.management_account_id} must have AccountType tag set to 'management', but found: '${lookup(data.aws_organizations_resource_tags.management.tags, "AccountType", "MISSING")}'"
+  }
+}
+
+check "log_archive_account_type" {
+  assert {
+    condition     = lookup(data.aws_organizations_resource_tags.log_archive.tags, "AccountType", "") == "log_archive"
+    error_message = "Log archive account ${var.log_archive_account_id} must have AccountType tag set to 'log_archive', but found: '${lookup(data.aws_organizations_resource_tags.log_archive.tags, "AccountType", "MISSING")}'"
+  }
+}
+
+check "audit_account_type" {
+  assert {
+    condition     = lookup(data.aws_organizations_resource_tags.audit.tags, "AccountType", "") == "audit"
+    error_message = "Audit account ${var.audit_account_id} must have AccountType tag set to 'audit', but found: '${lookup(data.aws_organizations_resource_tags.audit.tags, "AccountType", "MISSING")}'"
+  }
+}
+
+###############################################################################
+# Control Tower Service Roles
+#
+# IMPORTANT: If you previously had Control Tower deployed and decommissioned it,
+# review the troubleshooting guide before deployment:
+# docs/control-tower-troubleshooting.md
+#
+# These roles are required before Control Tower landing zone can be created
+# https://docs.aws.amazon.com/controltower/latest/userguide/lz-api-prereques.html
+# https://docs.aws.amazon.com/controltower/latest/userguide/access-control-managing-permissions.html
+###############################################################################
+
+resource "aws_iam_role" "controltower_admin" {
+  name = "AWSControlTowerAdmin"
+  path = "/service-role/"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "controltower.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = merge(var.global_tags, {
+    Name = "AWSControlTowerAdmin"
+  })
+}
+
+resource "aws_iam_role_policy" "controltower_admin" {
+  name = "AWSControlTowerAdminPolicy"
+  role = aws_iam_role.controltower_admin.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "ec2:DescribeAvailabilityZones"
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+data "aws_iam_policy" "controltower_admin" {
+  name = "AWSControlTowerServiceRolePolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "controltower_admin" {
+  role       = aws_iam_role.controltower_admin.name
+  policy_arn = data.aws_iam_policy.controltower_admin.arn
+}
+
+resource "aws_iam_role" "controltower_cloudtrail" {
+  name = "AWSControlTowerCloudTrailRole"
+  path = "/service-role/"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = merge(var.global_tags, {
+    Name = "AWSControlTowerCloudTrailRole"
+  })
+}
+
+resource "aws_iam_role_policy" "controltower_cloudtrail" {
+  name = "AWSControlTowerCloudTrailRolePolicy"
+  role = aws_iam_role.controltower_cloudtrail.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action   = "logs:CreateLogStream"
+        Resource = "arn:${data.aws_partition.current.partition}:logs:*:*:log-group:aws-controltower/CloudTrailLogs:*"
+        Effect   = "Allow"
+      },
+      {
+        Action   = "logs:PutLogEvents"
+        Resource = "arn:${data.aws_partition.current.partition}:logs:*:*:log-group:aws-controltower/CloudTrailLogs:*"
+        Effect   = "Allow"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role" "controltower_stackset" {
+  name = "AWSControlTowerStackSetRole"
+  path = "/service-role/"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudformation.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = merge(var.global_tags, {
+    Name = "AWSControlTowerStackSetRole"
+  })
+}
+
+resource "aws_iam_role_policy" "controltower_stackset" {
+  name = "AWSControlTowerStackSetRolePolicy"
+  role = aws_iam_role.controltower_stackset.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "sts:AssumeRole"
+        ]
+        Resource = [
+          "arn:${data.aws_partition.current.partition}:iam::*:role/AWSControlTowerExecution"
+        ]
+        Effect = "Allow"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role" "controltower_config" {
+  name = "AWSControlTowerConfigAggregatorRoleForOrganizations"
+  path = "/service-role/"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "config.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = merge(var.global_tags, {
+    Name = "AWSControlTowerConfigAggregatorRoleForOrganizations"
+  })
+}
+
+# https://docs.aws.amazon.com/controltower/latest/userguide/roles-how.html#config-role-for-organizations
+resource "aws_iam_role_policy_attachment" "controltower_config_organizations" {
+  role       = aws_iam_role.controltower_config.name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWSConfigRoleForOrganizations"
+}
+
+
+locals {
+  landing_zone_manifest = var.deploy_landing_zone ? templatefile("${path.module}/templates/LandingZoneManifest.tpl.json", {
+    logging_account_id        = var.log_archive_account_id
+    security_account_id       = var.audit_account_id
+    kms_key_arn               = aws_kms_key.control_tower.arn
+    access_management_enabled = !var.self_managed_sso # Invert: self_managed means CT SSO disabled
+    governed_regions          = var.governed_regions
+  }) : null
+
+  # Add Project tag to global tags
+  global_tags = merge(var.global_tags, {
+    Project = var.project
+  })
+}
+
+resource "aws_controltower_landing_zone" "this" {
+  count         = var.deploy_landing_zone ? 1 : 0
+  manifest_json = local.landing_zone_manifest
+  version       = "3.3"
+
+  # Ensure service roles and execution roles are created first
+  depends_on = [
+    aws_iam_role_policy.controltower_admin,
+    aws_iam_role_policy_attachment.controltower_admin,
+    aws_iam_role_policy.controltower_cloudtrail,
+    aws_iam_role_policy.controltower_stackset,
+    aws_iam_role_policy_attachment.controltower_config_organizations,
+  ]
+
+  # Note: Ignore manifest_json changes due to API string/number type inconsistencies
+  # Comment out this lifecycle block if you need to update the manifest
+  lifecycle {
+    ignore_changes = [manifest_json]
+  }
+}
+
+# Control Tower KMS key for Config and CloudTrail
+# https://docs.aws.amazon.com/controltower/latest/userguide/configure-kms-keys.html
+
+resource "aws_kms_alias" "control_tower" {
+  name          = "alias/control-tower-key"
+  target_key_id = aws_kms_key.control_tower.key_id
+}
+
+resource "aws_kms_key" "control_tower" {
+  description             = "KMS key for Control Tower resource encryption"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  tags = merge(local.global_tags, {
+    Name = "control-tower-key"
+  })
+}
+
+# https://docs.aws.amazon.com/controltower/latest/userguide/configure-kms-keys.html#kms-key-policy-update
+resource "aws_kms_key_policy" "control_tower" {
+  key_id = aws_kms_key.control_tower.key_id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Id      = "control-tower-key-policy"
+    Statement = [
+      {
+        Sid    = "Enable IAM User Permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = [
+            data.aws_caller_identity.current.arn,
+            "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:root"
+          ]
+        }
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ]
+        Resource = aws_kms_key.control_tower.arn
+      },
+      {
+        Sid    = "Allow Key Administrators and SSO Admin Roles"
+        Effect = "Allow"
+        Principal = {
+          AWS = concat([
+            data.aws_caller_identity.current.arn,
+            "arn:${data.aws_partition.current.partition}:iam::${var.management_account_id}:root"
+          ], var.additional_kms_key_admin_arns)
+        }
+        Action = [
+          "kms:Create*",
+          "kms:Describe*",
+          "kms:Enable*",
+          "kms:List*",
+          "kms:Put*",
+          "kms:Update*",
+          "kms:Revoke*",
+          "kms:Disable*",
+          "kms:Get*",
+          "kms:Delete*",
+          "kms:TagResource",
+          "kms:UntagResource",
+          "kms:ScheduleKeyDeletion",
+          "kms:CancelKeyDeletion"
+        ]
+        Resource = aws_kms_key.control_tower.arn
+      },
+      {
+        Sid    = "Allow Config Service Cross-Account"
+        Effect = "Allow"
+        Principal = {
+          Service = "config.amazonaws.com"
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey"
+        ]
+        Resource = aws_kms_key.control_tower.arn
+      },
+      {
+        Sid    = "Allow CloudTrail Service with Enhanced Controls"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+        Action = [
+          "kms:GenerateDataKey*",
+          "kms:Decrypt"
+        ]
+        Resource = aws_kms_key.control_tower.arn
+        Condition = {
+          StringEquals = {
+            "aws:SourceArn" = "arn:${data.aws_partition.current.partition}:cloudtrail:${var.aws_region}:${var.management_account_id}:trail/aws-controltower-BaselineCloudTrail"
+          },
+          StringLike = {
+            "kms:EncryptionContext:aws:cloudtrail:arn" = "arn:${data.aws_partition.current.partition}:cloudtrail:*:${var.management_account_id}:trail/*"
+          }
+        }
+      }
+    ]
+  })
+}
+
+# Control Tower Notes:
+#
+# Limited customization available via Terraform provider - additional changes require
+# AWS Console or Customizations for Control Tower (CfCT).
+#
+# IMPORTANT: Do not modify Control Tower-managed resources:
+#   - Security/Sandbox OUs and their guardrails
+#   - Multi-account CloudTrail/Config
+#   - Control Tower service roles
+#   - Log aggregation S3 buckets
+#
+# Resources:
+# - Landing Zone API: https://docs.aws.amazon.com/controltower/latest/userguide/lz-api-launch.html
+# - Control Reference: https://docs.aws.amazon.com/controltower/latest/controlreference/introduction.html
+# - Shared Resources: https://docs.aws.amazon.com/controltower/latest/userguide/shared-account-resources.html

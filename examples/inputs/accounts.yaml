@@ -1,0 +1,85 @@
+
+###############################################################################
+# Minimal accounts required:
+#  - management
+#  - network
+#  - log_archive
+#  - audit
+#  - workload
+###############################################################################
+management_account:
+  account_id: "111111111111"
+  account_name: "YourOrg Management"
+  email: "aws-management@yourorg.com"
+  account_type: management
+  ou: Root
+  lifecycle: prod
+  additional_tags:
+    Purpose: "Organization Management"
+  sso_groups:
+    - aws_admin
+
+network_account:
+  account_id: "222222222222"
+  account_name: "YourOrg Network"
+  email: "aws-network@yourorg.com"
+  account_type: network
+  ou: Infrastructure_NonProd
+  lifecycle: nonprod
+  additional_tags:
+    Purpose: "Transit Gateway & Network Hub"
+  sso_groups:
+    - aws_admin
+    - aws_net_admin
+    - aws_sys_admin
+    - aws_power_user
+    - aws_cyber_sec_eng
+    - aws_sec_auditor
+
+log_archive_account:
+  account_id: "333333333333"
+  account_name: "YourOrg Log Archive"
+  email: "aws-log-archive@yourorg.com"
+  account_type: log_archive
+  ou: Security
+  lifecycle: prod
+  additional_tags:
+    Purpose: "Centralized Logging"
+  sso_groups:
+    - aws_admin
+    - aws_cyber_sec_eng
+    - aws_sec_auditor
+
+audit_account:
+  account_id: "444444444444"
+  account_name: "YourOrg Audit"
+  email: "aws-audit@yourorg.com"
+  account_type: audit
+  ou: Security
+  lifecycle: prod
+  additional_tags:
+    Purpose: "Security Audit & Compliance"
+  sso_groups:
+    - aws_admin
+    - aws_cyber_sec_eng
+    - aws_sec_auditor
+
+workload_account_1:
+  account_id: "555555555555"
+  account_name: "YourOrg Workload"
+  email: "aws-workload@yourorg.com"
+  account_type: workload
+  ou: Workloads_NonProd
+  lifecycle: nonprod
+  additional_tags:
+    Purpose: "Application Workloads"
+  sso_groups:
+    - aws_admin
+    - aws_workload_admin
+    - aws_cyber_sec_eng
+    - aws_sec_auditor
+
+
+###############################################################################
+# Define additional accounts below, as required
+###############################################################################

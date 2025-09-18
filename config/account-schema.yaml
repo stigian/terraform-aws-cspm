@@ -1,0 +1,35 @@
+# AWS Account Configuration Schema
+# This file defines the structure for account parameters used by the organizations module
+
+# Example account configuration:
+# accounts:
+#   "123456789012":
+#     name: "YourCorp-Management"
+#     email: "aws-mgmt@yourcorp.com"
+#     ou: "Root"
+#     lifecycle: "prod"
+#     account_type: "management"
+#
+#   "234567890123":
+#     name: "YourCorp-Security-LogArchive"
+#     email: "aws-logs@yourcorp.com"
+#     ou: "Security"
+#     lifecycle: "prod"
+#     account_type: "log_archive"
+
+# Account Type Reference (from config/sra-account-types.yaml):
+# - management: Organization management account (Root OU)
+# - log_archive: Log aggregation account (Security OU)
+# - audit: Security audit account (Security OU)
+# - security_tooling: Security tools and scanning (Security OU)
+# - network: Network connectivity (Infrastructure OU)
+# - shared_services: Shared infrastructure (Infrastructure OU)
+# - workload: Application workloads (Workloads OU)
+
+# Field Definitions:
+# - name: Display name (must match existing AWS account name)
+# - email: Primary email (must match existing AWS account email)
+# - ou: Organizational Unit name (must match an OU from organizational_units or "Root")
+# - lifecycle: "prod" or "nonprod"
+# - account_type: Must be a valid SRA account type (see above)
+# - create_govcloud: Optional, defaults to false
