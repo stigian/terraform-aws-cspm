@@ -22,6 +22,12 @@ variable "aws_organization_id" {
   type        = string
 }
 
+variable "org_exec_role_name" {
+  description = "Name of the IAM role to assume in member accounts for organization-wide operations."
+  type        = string
+  default     = "OrganizationAccountAccessRole"
+}
+
 variable "global_tags" {
   description = "Tags applied to all resources created by this module."
   type        = map(string)
