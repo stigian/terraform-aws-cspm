@@ -14,13 +14,18 @@ variable "global_tags" {
 }
 
 variable "aggregator_linking_mode" {
-  description = "The linking mode for the Config aggregator. Determines which regions are included."
+  description = "The linking mode for the Security Hub finding aggregator. 'SPECIFIED_REGIONS' (recommended) includes only the regions specified in aggregator_specified_regions. 'ALL_REGIONS' includes all AWS regions which can be excessive for most deployments."
   type        = string
   default     = "SPECIFIED_REGIONS"
+
+  validation {
+    condition     = contains(["ALL_REGIONS", "SPECIFIED_REGIONS"], var.aggregator_linking_mode)
+    error_message = "The aggregator_linking_mode must be either 'ALL_REGIONS' or 'SPECIFIED_REGIONS'."
+  }
 }
 
 variable "aggregator_specified_regions" {
-  description = "List of regions to include in the Config aggregator when using SPECIFIED_REGIONS linking mode."
+  description = "List of regions to include in the Security Hub finding aggregator when using 'SPECIFIED_REGIONS' linking mode. Ignored when linking_mode is 'ALL_REGIONS'."
   type        = list(string)
-  default     = []
+  default     = ["us-east-1", "us-west-2"]
 }

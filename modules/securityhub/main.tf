@@ -85,8 +85,11 @@ resource "aws_securityhub_insight" "high" {
 }
 
 resource "aws_securityhub_finding_aggregator" "this" {
-  provider          = aws.audit
-  linking_mode      = var.aggregator_linking_mode
-  specified_regions = var.aggregator_specified_regions
-  depends_on        = [aws_securityhub_organization_admin_account.this]
+  provider     = aws.audit
+  linking_mode = var.aggregator_linking_mode
+  
+  # Only specify regions when linking_mode is SPECIFIED_REGIONS and regions are provided
+  specified_regions = var.aggregator_linking_mode == "SPECIFIED_REGIONS" && length(var.aggregator_specified_regions) > 0 ? var.aggregator_specified_regions : null
+  
+  depends_on = [aws_securityhub_organization_admin_account.this]
 }
