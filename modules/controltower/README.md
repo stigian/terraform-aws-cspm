@@ -201,9 +201,9 @@ module "controltower" {
 module "sso" {
   source = "../modules/sso"
 
-  project                = module.organizations.project
-  account_id_map         = module.organizations.account_id_map
-  auto_detect_control_tower = true
+  project                  = module.organizations.project
+  account_id_map           = module.organizations.account_id_map
+  use_self_managed_sso     = true
 }
 ```
 

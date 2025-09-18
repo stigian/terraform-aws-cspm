@@ -104,80 +104,17 @@ variable "account_role_mapping" {
 
 #####
 
-variable "enable_sso_management" {
+variable "use_self_managed_sso" {
   description = <<-EOT
     Whether to enable management of AWS IAM Identity Center resources.
 
     Set to false if:
     - Control Tower is managing Identity Center
     - Identity Center is managed elsewhere
-    - You only want Entra ID groups without AWS SSO integration
-
-    When false, only Entra ID resources (if enabled) will be created.
 
     Note: The module will automatically detect if Control Tower is managing
     Identity Center and adjust accordingly.
   EOT
   type        = bool
   default     = true
-}
-
-# TODO: remove this in favor of just using var.enable_sso_management
-variable "auto_detect_control_tower" {
-  description = "Whether to automatically detect if Control Tower is managing Identity Center and disable SSO management accordingly."
-  type        = bool
-  default     = true
-}
-
-# TODO: remove this, assume the caller will not have deployed IAM Identity Center yet and so no user will exist
-
-variable "initial_admin_users" {
-  description = <<-EOT
-    List of admin users to create in AWS IAM Identity Center (optional).
-
-    Each user object should contain:
-    - user_name: Unique username for SSO login (e.g., "john.doe" or "admin")
-    - display_name: Human-readable display name (e.g., "John Doe")
-    - email: Primary email address for the user
-    - given_name: First name
-    - family_name: Last name
-    - admin_level: Level of admin access ("full" or "security")
-      - "full": Gets aws_admin group (AdministratorAccess to all accounts)
-      - "security": Gets aws_cyber_sec_eng and aws_sec_auditor groups (security-focused access)
-
-    Example:
-      [
-        {
-          user_name    = "john.doe"
-          display_name = "John Doe"
-          email        = "john.doe@your-company.com"
-          given_name   = "John"
-          family_name  = "Doe"
-          admin_level  = "full"
-        }
-      ]
-  EOT
-  type = list(object({
-    user_name    = string
-    display_name = string
-    email        = string
-    given_name   = string
-    family_name  = string
-    admin_level  = string
-  }))
-  default = []
-
-  validation {
-    condition = alltrue([
-      for user in var.initial_admin_users : contains(["full", "security"], user.admin_level)
-    ])
-    error_message = "admin_level must be either 'full' or 'security'."
-  }
-
-  validation {
-    condition = alltrue([
-      for user in var.initial_admin_users : can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", user.email))
-    ])
-    error_message = "All email addresses must be valid email format."
-  }
 }
