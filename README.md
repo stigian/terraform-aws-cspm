@@ -102,7 +102,12 @@ This project does not enforce any specific naming conventions on accounts. We re
 - Examples: "ACME-LogArchive-Prod", "ACME-Audit-Prod", "ACME-Workload-Prod1", "ACME-Network-NonProd", "ACME-Management-Prod"
 - GovCloud Note: Account names cannot be changed in GovCloud partition
 
-Create the minimum required accounts first: management, log archive, and audit. Additional accounts can be created later as needed. See the [AWS documentation](https://repost.aws/knowledge-center/create-govcloud-account) for guidance. For every account, record the following information:
+Create the minimum required accounts first: management, log archive, and audit. Additional accounts can be created later as needed. See the [AWS documentation](https://repost.aws/knowledge-center/create-govcloud-account) for guidance. For every account, record the following information for input into the OpenTofu configuration:
+
+- Account Name
+- Account Email
+- Account ID (after creation)
+- Account Type (management, log_archive, audit, workload, network, etc.)
 
 
 ### 3. Prepare Inputs
@@ -127,7 +132,6 @@ tofu init
 # In your target file, uncomment foundation modules one at a time
 module.organizations
 module.controltower_admin
-module.controltower_members
 module.sso
 
 # Deploy core foundation
@@ -211,7 +215,7 @@ No action required.
 
 No action required.
 
-Control Tower applies a basic configuration for IAM Identity Center in the management account. This project intentionally keeps IAM Identity Center administration in the management account rather than delegating it to another account. Delegation is possible but should only be used for specific, well-justified use cases because the management account has the highest level of permissions.
+By passing the default `use_self_managed_sso  = true` to the SSO module, IAM Identity Center will be instantiated according to the module logic and _not_ by Control Tower. This project intentionally keeps IAM Identity Center administration in the management account rather than delegating it to another account. Delegation is possible but should only be used for specific, well-justified use cases because the management account has the highest level of permissions.
 
 Customizations to IAM Identity Center (for example, switching to an external identity provider) can be applied separately; refer to the AWS documentation for guidance.
 
