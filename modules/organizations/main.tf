@@ -51,7 +51,7 @@ resource "aws_organizations_organizational_unit" "this" {
 #   Control Tower will move it to the appropriate OU later, so we ignore changes to parent_id
 # If Control Tower is not enabled, place it in the specified OU or root if OU is "Root"
 resource "aws_organizations_account" "commercial" {
-  for_each = data.aws_partition.current.partition != "aws-us-gov" ? var.all_accounts_all_parameters : {}
+  for_each = data.aws_partition.current.partition != "aws-us-gov" ? var.organizations_account_parameters : {}
 
   name      = each.value.name
   email     = each.value.email
@@ -75,7 +75,7 @@ resource "aws_organizations_account" "commercial" {
 #   Control Tower will move it to the appropriate OU later, so we ignore changes to parent_id
 # If Control Tower is not enabled, place it in the specified OU or root if OU is "Root"
 resource "aws_organizations_account" "govcloud" {
-  for_each = data.aws_partition.current.partition == "aws-us-gov" ? var.all_accounts_all_parameters : {}
+  for_each = data.aws_partition.current.partition == "aws-us-gov" ? var.organizations_account_parameters : {}
 
   name      = each.value.name
   email     = each.value.email
