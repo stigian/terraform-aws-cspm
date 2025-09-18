@@ -87,7 +87,7 @@ module "sso" {
   global_tags           = var.global_tags
   account_id_map        = local.account_id_map
   account_role_mapping  = local.account_role_mapping
-  enable_sso_management = true
+  use_self_managed_sso  = true
 }
 
 ###############################################################################
@@ -273,9 +273,7 @@ module "sso" {
   global_tags               = var.global_tags
   account_id_map            = local.account_id_map
   account_role_mapping      = local.account_role_mapping
-  enable_sso_management     = true
-  auto_detect_control_tower = true
-  # existing_admin_user_id    = "8891c238-90a1-70e8-bf6c-0438721ecc9d" # UPDATE THIS with your actual User ID!
+  use_self_managed_sso      = true
 
   # Optional: Create additional admin users if needed
   # initial_admin_users = [

@@ -51,25 +51,6 @@ locals {
     }
   }
 
-  # Use admin users from variable (may be empty - that's fine since IAM fallback is available)
-  all_admin_users = var.initial_admin_users
-
-  # Create group memberships for new users to create
-  initial_admin_group_memberships = {
-    for pair in flatten([
-      for user in local.all_admin_users : [
-        for group in(user.admin_level == "full" ?
-          ["aws_admin"] :
-          ["aws_cyber_sec_eng", "aws_sec_auditor"]
-          ) : {
-          user_name  = user.user_name
-          group_name = group
-          user_data  = user
-        }
-      ]
-    ]) : "${pair.user_name}-${pair.group_name}" => pair
-  }
-
   # This block defines which groups are assigned to each AWS SRA account type
   # Elements in each list must use the keys from local.aws_sso_groups
   # Each account type gets different groups based on its security and operational requirements per AWS SRA
