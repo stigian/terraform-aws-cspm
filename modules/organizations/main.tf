@@ -31,6 +31,12 @@ resource "aws_organizations_organization" "this" {
     "BACKUP_POLICY",
     "SERVICE_CONTROL_POLICY",
   ]
+
+  lifecycle {
+    ignore_changes = [
+      aws_service_access_principals, # AWS automatically manages some service principals
+    ]
+  }
 }
 
 resource "aws_organizations_organizational_unit" "this" {

@@ -39,6 +39,12 @@ resource "aws_securityhub_configuration_policy" "this" {
     }
   }
 
+  lifecycle {
+    ignore_changes = [
+      configuration_policy[0].enabled_standard_arns, # Prevent changes when data sources recompute ARNs
+    ]
+  }
+
   depends_on = [aws_securityhub_organization_configuration.this]
 }
 
@@ -49,6 +55,10 @@ resource "aws_securityhub_configuration_policy_association" "root" {
   provider  = aws.audit
   target_id = data.aws_organizations_organization.management.roots[0].id
   policy_id = aws_securityhub_configuration_policy.this.id
+
+  lifecycle {
+    ignore_changes = [target_id] # Prevent replacement when data source recomputes root ID
+  }
 }
 
 resource "aws_securityhub_insight" "critical" {

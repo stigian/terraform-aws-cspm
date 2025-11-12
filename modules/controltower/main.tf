@@ -94,6 +94,10 @@ data "aws_iam_policy" "controltower_admin" {
 resource "aws_iam_role_policy_attachment" "controltower_admin" {
   role       = aws_iam_role.controltower_admin.name
   policy_arn = data.aws_iam_policy.controltower_admin.arn
+
+  lifecycle {
+    ignore_changes = [policy_arn] # Prevent replacement when data source recomputes ARN
+  }
 }
 
 resource "aws_iam_role" "controltower_cloudtrail" {
@@ -137,6 +141,10 @@ resource "aws_iam_role_policy" "controltower_cloudtrail" {
       }
     ]
   })
+
+  lifecycle {
+    ignore_changes = [policy] # Prevent changes when policy JSON is reformatted
+  }
 }
 
 resource "aws_iam_role" "controltower_stackset" {
@@ -179,6 +187,10 @@ resource "aws_iam_role_policy" "controltower_stackset" {
       }
     ]
   })
+
+  lifecycle {
+    ignore_changes = [policy] # Prevent changes when policy JSON is reformatted
+  }
 }
 
 resource "aws_iam_role" "controltower_config" {
@@ -207,6 +219,10 @@ resource "aws_iam_role" "controltower_config" {
 resource "aws_iam_role_policy_attachment" "controltower_config_organizations" {
   role       = aws_iam_role.controltower_config.name
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWSConfigRoleForOrganizations"
+
+  lifecycle {
+    ignore_changes = [policy_arn] # Prevent replacement when data source recomputes ARN
+  }
 }
 
 
@@ -350,6 +366,10 @@ resource "aws_kms_key_policy" "control_tower" {
       }
     ]
   })
+
+  lifecycle {
+    ignore_changes = [policy] # Prevent changes when policy JSON is reformatted or data sources recompute
+  }
 }
 
 # Control Tower Notes:

@@ -33,6 +33,10 @@ resource "aws_iam_role_policy_attachment" "aggregator_policy" {
   provider   = aws.audit
   role       = aws_iam_role.aggregator.name
   policy_arn = data.aws_iam_policy.aggregator.arn
+
+  lifecycle {
+    ignore_changes = [policy_arn] # Prevent replacement when data source recomputes ARN
+  }
 }
 
 resource "aws_config_configuration_aggregator" "org" {
