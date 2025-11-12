@@ -100,6 +100,6 @@ resource "aws_organizations_account" "govcloud" {
 
 resource "aws_ram_sharing_with_organization" "this" {
   lifecycle {
-    ignore_changes = [all]
+    ignore_changes = all
   }
 }
