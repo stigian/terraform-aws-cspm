@@ -8,8 +8,8 @@
 # Side-effect: creates 2x service-linked roles in management account
 # Side-effect: creates 1x service-linked role in audit account
 resource "aws_inspector2_delegated_admin_account" "this" {
-  provider   = aws.management         # from
-  account_id = var.audit_account_id    # to
+  provider   = aws.management       # from
+  account_id = var.audit_account_id # to
 }
 
 resource "aws_inspector2_enabler" "audit" {

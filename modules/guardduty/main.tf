@@ -75,20 +75,20 @@ resource "aws_guardduty_organization_configuration_feature" "runtime_monitoring"
   provider    = aws.audit
   detector_id = aws_guardduty_detector.audit.id
   name        = "RUNTIME_MONITORING"
-  auto_enable      = "ALL"
+  auto_enable = "ALL"
 
   additional_configuration {
-    name = "ECS_FARGATE_AGENT_MANAGEMENT"
+    name        = "ECS_FARGATE_AGENT_MANAGEMENT"
     auto_enable = "NONE"
   }
 
   additional_configuration {
-    name = "EC2_AGENT_MANAGEMENT"
+    name        = "EC2_AGENT_MANAGEMENT"
     auto_enable = "NONE"
   }
 
   additional_configuration {
-    name = "EKS_ADDON_MANAGEMENT"
+    name        = "EKS_ADDON_MANAGEMENT"
     auto_enable = "NONE"
   }
 
