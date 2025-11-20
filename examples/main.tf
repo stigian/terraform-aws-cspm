@@ -83,11 +83,11 @@ module "controltower_admin" {
 module "sso" {
   source = "git::https://github.com/stigian/terraform-aws-cspm//modules/sso?ref=main"
 
-  project               = var.project
-  global_tags           = var.global_tags
-  account_id_map        = local.account_id_map
-  account_role_mapping  = local.account_role_mapping
-  use_self_managed_sso  = true
+  project              = var.project
+  global_tags          = var.global_tags
+  account_id_map       = local.account_id_map
+  account_role_mapping = local.account_role_mapping
+  use_self_managed_sso = true
 }
 
 ###############################################################################
@@ -269,11 +269,11 @@ module "controltower_members" {
 module "sso" {
   source = "../modules/sso"
 
-  project                   = var.project
-  global_tags               = var.global_tags
-  account_id_map            = local.account_id_map
-  account_role_mapping      = local.account_role_mapping
-  use_self_managed_sso      = true
+  project              = var.project
+  global_tags          = var.global_tags
+  account_id_map       = local.account_id_map
+  account_role_mapping = local.account_role_mapping
+  use_self_managed_sso = true
 
   # Optional: Create additional admin users if needed
   # initial_admin_users = [

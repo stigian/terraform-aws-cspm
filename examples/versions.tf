@@ -15,9 +15,9 @@ terraform {
 
 # ── shared local values (once, at the top) ──
 locals {
-  non_lz_accounts    = local.non_lz_accounts_map
-  non_mgmt_accounts  = local.non_mgmt_accounts_map
-  all_accounts       = local.aws_account_parameters
+  non_lz_accounts   = local.non_lz_accounts_map
+  non_mgmt_accounts = local.non_mgmt_accounts_map
+  all_accounts      = local.aws_account_parameters
 }
 
 # ── provider configurations ──
